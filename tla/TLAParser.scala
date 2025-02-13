@@ -711,64 +711,64 @@ object TLAParser extends PassSeq:
         ).rewrite: (local, op) =>
           splice(tokens.Local(op.unparent()).like(local))
 
-  // TODO: finish expression parsing
-  // val buildExpressions = passDef:
-  //   wellformed := prevWellformed.makeDerived:
-  //     val removedCases = Seq(
-  //       TLAReader.StringLiteral,
-  //       TLAReader.NumberLiteral,
-  //       TLAReader.TupleGroup,
-  //     )
-  //     tokens.Module.Defns.removeCases(removedCases*)
-  //     tokens.Module.Defns.addCases(tokens.Expr)
-  //     TLAReader.groupTokens.foreach: tok =>
-  //       tok.removeCases(removedCases*)
-  //       tok.addCases(tokens.Expr)
+// TODO: finish expression parsing
+// val buildExpressions = passDef:
+//   wellformed := prevWellformed.makeDerived:
+//     val removedCases = Seq(
+//       TLAReader.StringLiteral,
+//       TLAReader.NumberLiteral,
+//       TLAReader.TupleGroup,
+//     )
+//     tokens.Module.Defns.removeCases(removedCases*)
+//     tokens.Module.Defns.addCases(tokens.Expr)
+//     TLAReader.groupTokens.foreach: tok =>
+//       tok.removeCases(removedCases*)
+//       tok.addCases(tokens.Expr)
 
-  //     tokens.Expr.importFrom(tla.wellformed)
-  //     tokens.Expr.addCases(tokens.TmpGroupExpr)
+//     tokens.Expr.importFrom(tla.wellformed)
+//     tokens.Expr.addCases(tokens.TmpGroupExpr)
 
-  //     tokens.TmpGroupExpr ::= tokens.Expr
+//     tokens.TmpGroupExpr ::= tokens.Expr
 
-  //   pass(once = false, strategy = pass.bottomUp)
-  //     .rules:
-  //       on(
-  //         TLAReader.StringLiteral
-  //       ).rewrite: lit =>
-  //         splice(tokens.Expr(tokens.Expr.StringLiteral().like(lit)))
-  //       | on(
-  //         TLAReader.NumberLiteral
-  //       ).rewrite: lit =>
-  //         splice(tokens.Expr(tokens.Expr.NumberLiteral().like(lit)))
-  //       | on(
-  //         field(TLAReader.Alpha)
-  //         ~ field(
-  //           tok(TLAReader.ParenthesesGroup) *> children(
-  //             repeatedSepBy(`,`)(tokens.Expr)
-  //           )
-  //         )
-  //         ~ trailing
-  //       ).rewrite: (name, params) =>
-  //         splice(tokens.Expr(tokens.Expr.OpCall(
-  //           tokens.Id().like(name),
-  //           tokens.Expr.OpCall.Params(params.iterator.map(_.unparent())),
-  //         )))
-  //       | on(
-  //         TLAReader.Alpha
-  //       ).rewrite: name =>
-  //         splice(tokens.Expr(tokens.Expr.OpCall(
-  //           tokens.Id().like(name),
-  //           tokens.Expr.OpCall.Params(),
-  //         )))
-  //       | on(
-  //         tok(TLAReader.ParenthesesGroup) *> onlyChild(tokens.Expr)
-  //       ).rewrite: expr =>
-  //         // mark this group as an expression, but leave evidence that it is a group (for operator precedence handling)
-  //         splice(tokens.Expr(tokens.TmpGroupExpr(expr.unparent())))
-  //       | on(
-  //         tok(TLAReader.TupleGroup).product(children(
-  //           field(repeatedSepBy(`,`)(tokens.Expr))
-  //           ~ eof
-  //         ))
-  //       ).rewrite: (lit, elems) =>
-  //         splice(tokens.Expr(tokens.Expr.TupleLiteral(elems.iterator.map(_.unparent()))))
+//   pass(once = false, strategy = pass.bottomUp)
+//     .rules:
+//       on(
+//         TLAReader.StringLiteral
+//       ).rewrite: lit =>
+//         splice(tokens.Expr(tokens.Expr.StringLiteral().like(lit)))
+//       | on(
+//         TLAReader.NumberLiteral
+//       ).rewrite: lit =>
+//         splice(tokens.Expr(tokens.Expr.NumberLiteral().like(lit)))
+//       | on(
+//         field(TLAReader.Alpha)
+//         ~ field(
+//           tok(TLAReader.ParenthesesGroup) *> children(
+//             repeatedSepBy(`,`)(tokens.Expr)
+//           )
+//         )
+//         ~ trailing
+//       ).rewrite: (name, params) =>
+//         splice(tokens.Expr(tokens.Expr.OpCall(
+//           tokens.Id().like(name),
+//           tokens.Expr.OpCall.Params(params.iterator.map(_.unparent())),
+//         )))
+//       | on(
+//         TLAReader.Alpha
+//       ).rewrite: name =>
+//         splice(tokens.Expr(tokens.Expr.OpCall(
+//           tokens.Id().like(name),
+//           tokens.Expr.OpCall.Params(),
+//         )))
+//       | on(
+//         tok(TLAReader.ParenthesesGroup) *> onlyChild(tokens.Expr)
+//       ).rewrite: expr =>
+//         // mark this group as an expression, but leave evidence that it is a group (for operator precedence handling)
+//         splice(tokens.Expr(tokens.TmpGroupExpr(expr.unparent())))
+//       | on(
+//         tok(TLAReader.TupleGroup).product(children(
+//           field(repeatedSepBy(`,`)(tokens.Expr))
+//           ~ eof
+//         ))
+//       ).rewrite: (lit, elems) =>
+//         splice(tokens.Expr(tokens.Expr.TupleLiteral(elems.iterator.map(_.unparent()))))

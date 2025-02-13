@@ -385,7 +385,7 @@ object Node:
 
       require(
         results.size == 1,
-        s"token(s) not found ${(tok +: toks).map(_.name).mkString(", ")}"
+        s"token(s) not found ${(tok +: toks).map(_.name).mkString(", ")}, in ${this.toShortString()}"
       )
       results.head
 

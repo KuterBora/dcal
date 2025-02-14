@@ -39,11 +39,7 @@ class ExprParserTests extends munit.FunSuite:
               tokens.Operator.Params(),
               tokens.Expr(
                 top.unparentedChildren
-              )
-            )
-          )
-        )
-      )
+              )))))
       ExprParser(freshTop)
       Node.Top(
         freshTop(tokens.Module)(tokens.Module.Defns)(tokens.Operator)(
@@ -64,6 +60,16 @@ class ExprParserTests extends munit.FunSuite:
       Node.Top(tokens.Expr.StringLiteral("string\nnewline"))
     )
 
+  test("Set Literal"):
+    assertEquals(
+      "{1, 2, 3}".parseStr,
+      Node.Top(
+        tokens.Expr.SetLiteral(
+          tokens.Expr(tokens.Expr.NumberLiteral("1")),
+          tokens.Expr(tokens.Expr.NumberLiteral("2")),
+          tokens.Expr(tokens.Expr.NumberLiteral("3"))
+        )))
+  
   test("TupleLiteral"):
     assertEquals(
       "<<1, 2, 3>>".parseStr,
@@ -72,9 +78,41 @@ class ExprParserTests extends munit.FunSuite:
           tokens.Expr(tokens.Expr.NumberLiteral("1")),
           tokens.Expr(tokens.Expr.NumberLiteral("2")),
           tokens.Expr(tokens.Expr.NumberLiteral("3"))
+        )))
+
+  test("RecordLiteral"):
+    assertEquals(
+      "[x |-> 2, y |-> 3]".parseStr,
+      Node.Top(
+        tokens.Expr.RecordLiteral(
+          tokens.Expr.RecordLiteral.Field(
+            // tokens.Expr.OpCall(
+            //   tokens.Id("x"),
+            //   tokens.Expr.OpCall.Params()
+            // ),
+            tokens.Id("x"),
+            tokens.Expr(tokens.Expr.NumberLiteral("2"))
+          ),
+          tokens.Expr.RecordLiteral.Field(
+            // tokens.Expr.OpCall(
+            //   tokens.Id("y"),
+            //   tokens.Expr.OpCall.Params()
+            // ),
+            tokens.Id("y"),
+            tokens.Expr(tokens.Expr.NumberLiteral("3"))
+          ),
         )
       )
     )
+  
+  test("Name"):
+    assertEquals(
+      "x".parseStr,
+      Node.Top(
+        tokens.Expr.OpCall(
+          tokens.Id("x"),
+          tokens.Expr.OpCall.Params()
+        )))
 
   test("Single Binary Operator"):
     assertEquals(
@@ -87,10 +125,7 @@ class ExprParserTests extends munit.FunSuite:
           tokens.Expr.OpCall.Params(
             tokens.Expr(tokens.Expr.NumberLiteral("5")),
             tokens.Expr(tokens.Expr.NumberLiteral("6"))
-          )
-        )
-      )
-    )
+          ))))
     assertEquals(
       "5 $ 6".parseStr,
       Node.Top(
@@ -99,10 +134,7 @@ class ExprParserTests extends munit.FunSuite:
           tokens.Expr.OpCall.Params(
             tokens.Expr(tokens.Expr.NumberLiteral("5")),
             tokens.Expr(tokens.Expr.NumberLiteral("6"))
-          )
-        )
-      )
-    )
+          ))))
   
   test("ParenthesesGroup"):
     assertEquals(
@@ -123,10 +155,7 @@ class ExprParserTests extends munit.FunSuite:
           tokens.Expr.OpCall.Params(
             tokens.Expr(tokens.Expr.NumberLiteral("5")),
             tokens.Expr(tokens.Expr.NumberLiteral("6"))
-          )
-        )
-      )
-    )
+          ))))
     assertEquals(
       "(1 + 2) * 3".parseStr,
       Node.Top(
@@ -145,7 +174,4 @@ class ExprParserTests extends munit.FunSuite:
               )
             )),
             tokens.Expr(tokens.Expr.NumberLiteral("3"))
-          )
-        )
-      )
-    )
+          ))))

@@ -170,6 +170,7 @@ val wellformed: Wellformed =
       t.Expr.TupleLiteral,
       t.Expr.RecordLiteral,
       t.Expr.Project,
+      t.Expr.RecordSetLiteral,
       t.Expr.OpCall,
       t.Expr.FnCall,
       t.Expr.If,

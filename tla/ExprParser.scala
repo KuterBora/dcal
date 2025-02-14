@@ -33,7 +33,7 @@ object ExprParser extends PassSeq:
     pass(once = false, strategy = pass.bottomUp)
       .rules:
         on(
-          parent(tokens.Expr) *>
+           parent(tokens.Expr) *>
             TLAReader.NumberLiteral
         ).rewrite: lit =>
           splice(tokens.Expr(tokens.Expr.NumberLiteral().like(lit)))
@@ -42,23 +42,61 @@ object ExprParser extends PassSeq:
             TLAReader.StringLiteral
         ).rewrite: lit =>
           splice(tokens.Expr(tokens.Expr.StringLiteral().like(lit)))
-        // TODO: Set Literal
+        | on(
+          parent(tokens.Expr) *>
+            tok(TLAReader.BracesGroup) *>
+              children:
+                field(repeatedSepBy(`,`)(rawExpression))
+                ~ eof
+        ).rewrite: exprs =>
+          splice(
+            tokens.Expr(
+              tokens.Expr.SetLiteral(exprs.iterator.map(_.mkNode))
+            ))
         | on(
           parent(tokens.Expr) *>
             tok(TLAReader.TupleGroup).product(
               children(
                 field(repeatedSepBy(`,`)(rawExpression))
                   ~ eof
-              )
-            )
+              ))
         ).rewrite: (lit, elems) =>
           splice(
             tokens.Expr(
               tokens.Expr.TupleLiteral(elems.iterator.map(_.mkNode)).like(lit)
-            )
-          )
-        // TODO: Record Literal
+            ))
+        | on(
+          parent(tokens.Expr) *>
+            tok(TLAReader.SqBracketsGroup) *>
+              children:
+                repeatedSepBy(`,`)(
+                  field(TLAReader.Alpha)
+                    ~ skip(`|->`)
+                    ~ field(rawExpression)
+                    ~ trailing
+                )
+        ).rewrite: fields =>
+          splice(
+            tokens.Expr(
+              tokens.Expr.RecordLiteral(
+                fields.iterator.map(
+                  (opCall, expr) =>
+                    tokens.Expr.RecordLiteral.Field(
+                      tokens.Id().like(opCall.unparent()),
+                      expr.mkNode
+                    ) 
+                ))))
         // TODO: Project
+        | on(
+          parent(tokens.Expr) *>
+          TLAReader.Alpha
+        ).rewrite: name =>
+          splice(
+            tokens.Expr(
+              tokens.Expr.OpCall(
+                tokens.Id().like(name),
+                tokens.Expr.OpCall.Params(),
+              )))
         | on(
           parent(tokens.Expr) *>
             field(tokens.Expr)
@@ -74,8 +112,8 @@ object ExprParser extends PassSeq:
                   tokens.Expr.OpCall.Params(left.unparent(), right.unparent())
                 )
                 .like(op)
-            )
-          )
+            ))
+        // ~ field(tok(defns.InfixOperator.instances.filter(_.isAssociative)*))
         // TODO: other kinds of OpCalls
         // TODO: Fn Call
         // TODO: if
@@ -98,7 +136,7 @@ object ExprParser extends PassSeq:
         ).rewrite: expr =>
           splice(
             tokens.Expr(expr.mkNode)
-          )       
+          )
   end buildExpressions
 
   val removeNestedExpr = passDef:

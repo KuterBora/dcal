@@ -30,6 +30,7 @@ object ExprParser extends PassSeq:
       tokens.Expr.importFrom(tla.wellformed)
       tokens.Expr.addCases(tokens.Expr)
 
+    // TODO: assign the correct source with .like()
     pass(once = false, strategy = pass.bottomUp)
       .rules:
         on(
@@ -69,7 +70,7 @@ object ExprParser extends PassSeq:
           parent(tokens.Expr) *>
             tok(TLAReader.SqBracketsGroup) *>
               children:
-                repeatedSepBy(`,`)(
+                repeatedSepBy1(`,`)(
                   field(TLAReader.Alpha)
                     ~ skip(`|->`)
                     ~ field(rawExpression)
@@ -86,10 +87,57 @@ object ExprParser extends PassSeq:
                       expr.mkNode
                     ) 
                 ))))
-        // TODO: Project
+        // TOOD: projection should match before Names are assigned 
         | on(
           parent(tokens.Expr) *>
-          TLAReader.Alpha
+            field(tokens.Expr.withChildren(
+              field(tokens.Expr.OpCall)
+              ~ eof
+            )) // TODO: can this be a function call? as in, can param be non empty?
+            ~ skip(tok(defns.`.`))
+            ~ field(tokens.Expr.withChildren(
+                field(tokens.Expr.OpCall.withChildren(
+                  field(tokens.Id)
+                  ~ skip(tokens.Expr.OpCall.Params) // TODO:  these have to be empty
+                  ~ eof
+                ))
+                ~ eof
+              ))
+            ~ trailing
+        ).rewrite: (id1, id2) =>
+          splice(
+            tokens.Expr(
+              tokens.Expr.Project(
+                tokens.Expr(
+                  id1.unparent()
+                ),
+                id2.unparent()
+              )))
+        | on( // TODO: is this even legal?
+          parent(tokens.Expr) *>
+            field(tokens.Expr) // TODO: ensure this is a record?
+            ~ skip(tok(defns.`.`))
+            ~ field(tokens.Expr.withChildren(
+                field(tokens.Expr.OpCall.withChildren(
+                  field(tokens.Id)
+                  ~ skip(tokens.Expr.OpCall.Params) // TODO:  these have to be empty
+                  ~ eof
+                ))
+                ~ eof
+              ))
+            ~ trailing
+        ).rewrite: (expr, id) =>
+          splice(
+            tokens.Expr(
+              tokens.Expr.Project(
+                expr.unparent(),
+                id.unparent()
+              )))
+        // TODO: second project
+        // TODO: recordSetLiteral
+        | on(
+          parent(tokens.Expr) *>
+            TLAReader.Alpha
         ).rewrite: name =>
           splice(
             tokens.Expr(
@@ -97,27 +145,66 @@ object ExprParser extends PassSeq:
                 tokens.Id().like(name),
                 tokens.Expr.OpCall.Params(),
               )))
-        | on(
+        // TODO: calls
+        | on( 
           parent(tokens.Expr) *>
             field(tokens.Expr)
-            ~ field(tok(defns.InfixOperator.instances*))
+            // TODO: proper filter
+            ~ field(tok(defns.InfixOperator.instances.filter(i => i.highPredecence < 17)*))
             ~ field(tokens.Expr)
             ~ trailing
         ).rewrite: (left, op, right) =>
           splice(
             tokens.Expr(
-              tokens.Expr
-                .OpCall(
+              tokens.Expr.OpCall(
                   tokens.OpSym(op.unparent()),
                   tokens.Expr.OpCall.Params(left.unparent(), right.unparent())
                 )
                 .like(op)
             ))
         // ~ field(tok(defns.InfixOperator.instances.filter(_.isAssociative)*))
-        // TODO: other kinds of OpCalls
+        // TODO: prefix
+        // TODO: infix assoc
+        // TODO: infix non assoc
         // TODO: Fn Call
-        // TODO: if
-        // TODO: Case
+        | on(
+          parent(tokens.Expr) *>
+            skip(defns.IF)
+            ~ field(tokens.Expr)
+            ~ skip(defns.THEN)
+            ~ field(tokens.Expr)
+            ~ skip(defns.ELSE)
+            ~ field(tokens.Expr)
+            ~ trailing
+        ).rewrite: (pred, t, f) =>
+          splice(
+            tokens.Expr.If(
+              pred.unparent(),
+              t.unparent(),
+              f.unparent()
+            ))
+        | on(
+          parent(tokens.Expr) *>
+            skip(defns.CASE)
+            ~ field(
+              repeatedSepBy(defns.`[]`)(
+                field(tokens.Expr)
+                ~ skip(defns.-)
+                ~ skip(defns.>)
+                ~ field(tokens.Expr)
+                ~ trailing
+                ))
+            ~ eof
+            // TODO: optional OTHER
+        ).rewrite: cases =>
+          splice(
+            tokens.Expr(
+              tokens.Expr.Case(
+                cases.iterator.map((pred, branch) =>
+                  tokens.Expr.Case.Branch(
+                    pred.unparent(),
+                    branch.unparent(),
+                  )))))
         // TODO: Let
         // TODO: Exists
         // TODO: Forall

@@ -86,25 +86,45 @@ class ExprParserTests extends munit.FunSuite:
       Node.Top(
         tokens.Expr.RecordLiteral(
           tokens.Expr.RecordLiteral.Field(
-            // tokens.Expr.OpCall(
-            //   tokens.Id("x"),
-            //   tokens.Expr.OpCall.Params()
-            // ),
             tokens.Id("x"),
             tokens.Expr(tokens.Expr.NumberLiteral("2"))
           ),
           tokens.Expr.RecordLiteral.Field(
-            // tokens.Expr.OpCall(
-            //   tokens.Id("y"),
-            //   tokens.Expr.OpCall.Params()
-            // ),
             tokens.Id("y"),
             tokens.Expr(tokens.Expr.NumberLiteral("3"))
-          ),
-        )
-      )
-    )
+          ))))
+
+  // TODO: test record set
   
+  test("Projection (Record Field Acess)"):
+    assertEquals(
+      "x.y".parseStr,
+      Node.Top(
+        tokens.Expr.Project(
+          tokens.Expr(
+            tokens.Expr.OpCall(
+              tokens.Id("x"),
+              tokens.Expr.OpCall.Params()
+            )),
+          tokens.Id("y"))))
+    assertEquals(
+      "[y |-> 2].y".parseStr,
+      Node.Top(
+        tokens.Expr.Project(
+          tokens.Expr(
+            tokens.Expr.RecordLiteral(
+              tokens.Expr.RecordLiteral.Field(
+                tokens.Id("y"),
+                tokens.Expr(tokens.Expr.NumberLiteral("2"))
+          )
+            )),
+          tokens.Id("y"))))
+    // TODO: r["f"] and [x -> 1]["x"]
+    // assertEquals(
+    //   "x[\"y\"]".parseStr,
+    //   Node.Top()
+    // )
+
   test("Name"):
     assertEquals(
       "x".parseStr,
@@ -127,14 +147,74 @@ class ExprParserTests extends munit.FunSuite:
             tokens.Expr(tokens.Expr.NumberLiteral("6"))
           ))))
     assertEquals(
-      "5 $ 6".parseStr,
+      "5 $ x".parseStr,
       Node.Top(
         tokens.Expr.OpCall(
           tokens.OpSym(defns.$("$")),
           tokens.Expr.OpCall.Params(
             tokens.Expr(tokens.Expr.NumberLiteral("5")),
-            tokens.Expr(tokens.Expr.NumberLiteral("6"))
+            tokens.Expr(
+              tokens.Expr.OpCall(
+                tokens.Id("x"),
+                tokens.Expr.OpCall.Params()
+              ))))))
+  
+  // TODO: test calls
+  
+  test("If"):
+    assertEquals(
+      """IF A 
+       |THEN 1
+       |ELSE 2""".stripMargin.parseStr,
+      Node.Top(
+        tokens.Expr.If(
+          tokens.Expr(
+            tokens.Expr.OpCall(
+              tokens.Id("A"),
+              tokens.Expr.OpCall.Params()
+            )),
+          tokens.Expr(tokens.Expr.NumberLiteral("1")),
+          tokens.Expr(tokens.Expr.NumberLiteral("2"))
+        )))
+  
+  test("Case"):
+    assertEquals(
+      """CASE A -> 1 
+       | [] B -> 2""".stripMargin.parseStr,
+      Node.Top(
+        tokens.Expr.Case(
+          tokens.Expr.Case.Branch(
+            tokens.Expr(tokens.Expr.OpCall(
+              tokens.Id("A"),
+              tokens.Expr.OpCall.Params()
+            )),
+            tokens.Expr(tokens.Expr.NumberLiteral("1"))
+          ),
+          tokens.Expr.Case.Branch(
+            tokens.Expr(tokens.Expr.OpCall(
+              tokens.Id("B"),
+              tokens.Expr.OpCall.Params()
+            )),
+            tokens.Expr(tokens.Expr.NumberLiteral("2"))
           ))))
+    // TODO: test optional OTHER
+    // assertEquals(
+    //   """CASE A -> 1 
+    //    | [] B -> 2
+    //    | OTHER -> 3""".stripMargin.parseStr,
+    //   Node.Top(
+    //     )
+    //   )
+  
+    // TODO: test Let
+    // TODO: test Exists
+    // TODO: test Forall
+    // TODO: test Function
+    // TODO: test SetComprehension
+    // TODO: test SetRefinement
+    // TODO: test Choose
+    // TODO: test Except
+    // TODO: test Lambda
   
   test("ParenthesesGroup"):
     assertEquals(
@@ -142,9 +222,12 @@ class ExprParserTests extends munit.FunSuite:
       Node.Top(tokens.Expr.NumberLiteral("1"))
     )
     assertEquals(
-      "(((1)))".parseStr,
-      Node.Top(tokens.Expr.NumberLiteral("1"))
-    )
+      "(((x)))".parseStr,
+      Node.Top(
+        tokens.Expr.OpCall(
+          tokens.Id("x"),
+          tokens.Expr.OpCall.Params()
+        )))
     assertEquals(
       "(5 + 6)".parseStr,
       Node.Top(

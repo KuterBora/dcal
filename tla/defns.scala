@@ -100,7 +100,7 @@ object defns:
 
   sealed trait InfixOperator(
       val lowPrecedence: Int,
-      val highPredecence: Int,
+      val highPrecedence: Int,
       val isAssociative: Boolean = false
   ) extends Operator
   object InfixOperator extends util.HasInstanceArray[InfixOperator]

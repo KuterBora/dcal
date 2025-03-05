@@ -201,7 +201,7 @@ val wellformed: Wellformed =
       t.Id
     )
     t.Expr.RecordSetLiteral ::= repeated(
-      t.Expr.RecordLiteral.Field,
+      t.Expr.RecordSetLiteral.Field,
       minCount = 1
     )
     t.Expr.RecordSetLiteral.Field ::= fields(
@@ -223,11 +223,20 @@ val wellformed: Wellformed =
       t.Expr
     )
 
-    t.Expr.Case ::= repeated(t.Expr.Case.Branch, minCount = 1)
+    t.Expr.Case ::= fields(
+      t.Expr.Case.Branches,
+      t.Expr.Case.Other
+    )
+    t.Expr.Case.Branches ::= repeated(t.Expr.Case.Branch, minCount = 1) 
     t.Expr.Case.Branch ::= fields(
       t.Expr,
       t.Expr
     )
+    t.Expr.Case.Other ::= choice(
+      t.Expr,
+      t.Expr.Case.Other.None
+    )
+    t.Expr.Case.Other.None ::= Atom
 
     t.Expr.Let ::= fields(
       t.Expr.Let.Defns,

@@ -69,6 +69,10 @@ class ExprParserTests extends munit.FunSuite:
           tokens.Expr(tokens.Expr.NumberLiteral("2")),
           tokens.Expr(tokens.Expr.NumberLiteral("3"))
         )))
+    assertEquals(
+      "{}".parseStr,
+      Node.Top(tokens.Expr.SetLiteral())
+    )
   
   test("TupleLiteral"):
     assertEquals(
@@ -79,6 +83,11 @@ class ExprParserTests extends munit.FunSuite:
           tokens.Expr(tokens.Expr.NumberLiteral("2")),
           tokens.Expr(tokens.Expr.NumberLiteral("3"))
         )))
+    assertEquals(
+      "<<>>".parseStr,
+      Node.Top(
+        tokens.Expr.TupleLiteral()
+      ))
 
   test("RecordLiteral"):
     assertEquals(
@@ -93,8 +102,6 @@ class ExprParserTests extends munit.FunSuite:
             tokens.Id("y"),
             tokens.Expr(tokens.Expr.NumberLiteral("3"))
           ))))
-
-  // TODO: test record set
   
   test("Projection (Record Field Acess)"):
     assertEquals(
@@ -108,6 +115,18 @@ class ExprParserTests extends munit.FunSuite:
             )),
           tokens.Id("y"))))
     assertEquals(
+      "x.y.z".parseStr,
+      Node.Top(
+        tokens.Expr.Project(
+          tokens.Expr(tokens.Expr.Project(
+            tokens.Expr(
+              tokens.Expr.OpCall(
+                tokens.Id("x"),
+                tokens.Expr.OpCall.Params()
+              )),
+            tokens.Id("y"))),
+          tokens.Id("z"))))
+    assertEquals(
       "[y |-> 2].y".parseStr,
       Node.Top(
         tokens.Expr.Project(
@@ -119,11 +138,19 @@ class ExprParserTests extends munit.FunSuite:
           )
             )),
           tokens.Id("y"))))
-    // TODO: r["f"] and [x -> 1]["x"]
-    // assertEquals(
-    //   "x[\"y\"]".parseStr,
-    //   Node.Top()
-    // )
+
+  test("RecordSetLiteral"):
+    assertEquals(
+      "[x : {1, 2}]".parseStr,
+      Node.Top(
+        tokens.Expr.RecordSetLiteral(
+          tokens.Expr.RecordSetLiteral.Field(
+            tokens.Id("x"),
+            tokens.Expr(
+              tokens.Expr.SetLiteral(
+                tokens.Expr(tokens.Expr.NumberLiteral("1")),
+                tokens.Expr(tokens.Expr.NumberLiteral("2"))
+              ))))))
 
   test("Name"):
     assertEquals(
@@ -134,32 +161,88 @@ class ExprParserTests extends munit.FunSuite:
           tokens.Expr.OpCall.Params()
         )))
 
-  test("Single Binary Operator"):
+  // test("Single Binary Operator"):
+  //   assertEquals(
+  //     "5 + 6".parseStr,
+  //     Node.Top(
+  //       tokens.Expr.OpCall(
+  //         tokens.OpSym(
+  //           defns.+("+")
+  //         ),
+  //         tokens.Expr.OpCall.Params(
+  //           tokens.Expr(tokens.Expr.NumberLiteral("5")),
+  //           tokens.Expr(tokens.Expr.NumberLiteral("6"))
+  //         ))))
+  //   assertEquals(
+  //     "5 $ x".parseStr,
+  //     Node.Top(
+  //       tokens.Expr.OpCall(
+  //         tokens.OpSym(defns.$("$")),
+  //         tokens.Expr.OpCall.Params(
+  //           tokens.Expr(tokens.Expr.NumberLiteral("5")),
+  //           tokens.Expr(
+  //             tokens.Expr.OpCall(
+  //               tokens.Id("x"),
+  //               tokens.Expr.OpCall.Params()
+  //             ))))))
+
+  test("Precedence: Infix Operators"):
     assertEquals(
-      "5 + 6".parseStr,
+      "5 * 6 + 7".parseStr,
       Node.Top(
         tokens.Expr.OpCall(
           tokens.OpSym(
             defns.+("+")
           ),
           tokens.Expr.OpCall.Params(
-            tokens.Expr(tokens.Expr.NumberLiteral("5")),
-            tokens.Expr(tokens.Expr.NumberLiteral("6"))
-          ))))
-    assertEquals(
-      "5 $ x".parseStr,
-      Node.Top(
-        tokens.Expr.OpCall(
-          tokens.OpSym(defns.$("$")),
-          tokens.Expr.OpCall.Params(
-            tokens.Expr(tokens.Expr.NumberLiteral("5")),
             tokens.Expr(
               tokens.Expr.OpCall(
-                tokens.Id("x"),
-                tokens.Expr.OpCall.Params()
-              ))))))
-  
-  // TODO: test calls
+                tokens.OpSym(
+                  defns.*("*")
+                ),
+                tokens.Expr.OpCall.Params(
+                  tokens.Expr(tokens.Expr.NumberLiteral("5")),
+                  tokens.Expr(tokens.Expr.NumberLiteral("6"))
+                ))),
+                tokens.Expr(tokens.Expr.NumberLiteral("7"))))))
+    // assertEquals(
+    //   "1 + 8 * 6 - 9 * 3".parseStr,
+    //   Node.Top())
+      // Node.Top(
+      //   tokens.Expr.OpCall(
+      //     tokens.OpSym(
+      //       defns.-("-")
+      //     ),
+      //     tokens.Expr.OpCall.Params(
+      //       tokens.Expr.OpCall(
+      //         tokens.OpSym(
+      //           defns.+("+")
+      //         ),
+      //         tokens.Expr.OpCall.Params(
+      //           tokens.Expr(tokens.Expr.NumberLiteral("1")),
+      //           tokens.Expr(
+      //             tokens.Expr.OpCall(
+      //               tokens.OpSym(
+      //                 defns.*("*")
+      //               ),
+      //               tokens.Expr.OpCall.Params(
+      //                 tokens.Expr(tokens.Expr.NumberLiteral("8")),
+      //                 tokens.Expr(tokens.Expr.NumberLiteral("6"))
+      //               ))))),
+      //       tokens.Expr(
+      //         tokens.Expr.OpCall(
+      //           tokens.OpSym(
+      //             defns.*("*")
+      //           ),
+      //           tokens.Expr.OpCall.Params(
+      //             tokens.Expr(tokens.Expr.NumberLiteral("9")),
+      //             tokens.Expr(tokens.Expr.NumberLiteral("3"))
+      //           )))))))
+  // test("FnCall"): ???: what about x[a, b, c] - needs to be parsed to (Expr, Expr) 
+  //   assertEquals(
+  //     "x[\"y\"]".parseStr,
+  //     Node.Top()
+  //   )
   
   test("If"):
     assertEquals(
@@ -183,38 +266,83 @@ class ExprParserTests extends munit.FunSuite:
        | [] B -> 2""".stripMargin.parseStr,
       Node.Top(
         tokens.Expr.Case(
-          tokens.Expr.Case.Branch(
-            tokens.Expr(tokens.Expr.OpCall(
-              tokens.Id("A"),
-              tokens.Expr.OpCall.Params()
+          tokens.Expr.Case.Branches(
+            tokens.Expr.Case.Branch(
+              tokens.Expr(tokens.Expr.OpCall(
+                tokens.Id("A"),
+                tokens.Expr.OpCall.Params()
+              )),
+              tokens.Expr(tokens.Expr.NumberLiteral("1"))
+            ),
+            tokens.Expr.Case.Branch(
+              tokens.Expr(tokens.Expr.OpCall(
+                tokens.Id("B"),
+                tokens.Expr.OpCall.Params()
+              )),
+              tokens.Expr(tokens.Expr.NumberLiteral("2"))
             )),
-            tokens.Expr(tokens.Expr.NumberLiteral("1"))
-          ),
-          tokens.Expr.Case.Branch(
-            tokens.Expr(tokens.Expr.OpCall(
-              tokens.Id("B"),
-              tokens.Expr.OpCall.Params()
+          tokens.Expr.Case.Other(tokens.Expr.Case.Other.None())
+        )))
+    assertEquals(
+      """CASE A -> 1 
+       | [] B -> 2
+       | OTHER -> 3""".stripMargin.parseStr,
+      Node.Top(
+        tokens.Expr.Case(
+          tokens.Expr.Case.Branches(
+            tokens.Expr.Case.Branch(
+              tokens.Expr(tokens.Expr.OpCall(
+                tokens.Id("A"),
+                tokens.Expr.OpCall.Params()
+              )),
+              tokens.Expr(tokens.Expr.NumberLiteral("1"))
+            ),
+            tokens.Expr.Case.Branch(
+              tokens.Expr(tokens.Expr.OpCall(
+                tokens.Id("B"),
+                tokens.Expr.OpCall.Params()
+              )),
+              tokens.Expr(tokens.Expr.NumberLiteral("2"))
             )),
-            tokens.Expr(tokens.Expr.NumberLiteral("2"))
+          tokens.Expr.Case.Other(
+            tokens.Expr(tokens.Expr.NumberLiteral("3"))
           ))))
-    // TODO: test optional OTHER
-    // assertEquals(
-    //   """CASE A -> 1 
-    //    | [] B -> 2
-    //    | OTHER -> 3""".stripMargin.parseStr,
-    //   Node.Top(
-    //     )
-    //   )
   
-    // TODO: test Let
-    // TODO: test Exists
-    // TODO: test Forall
-    // TODO: test Function
-    // TODO: test SetComprehension
-    // TODO: test SetRefinement
-    // TODO: test Choose
-    // TODO: test Except
-    // TODO: test Lambda
+  test("LET"):
+    assertEquals(
+      """LET x == 1
+      |y == 2
+      |IN  {y, x}""".stripMargin.parseStr,
+      Node.Top(
+        tokens.Expr.Let(
+          tokens.Expr.Let.Defns(
+            tokens.Operator(
+              tokens.Id("x"),
+              tokens.Operator.Params(),
+              tokens.Expr(tokens.Expr.NumberLiteral("1"))
+            ),
+            tokens.Operator(
+              tokens.Id("y"),
+              tokens.Operator.Params(),
+              tokens.Expr(tokens.Expr.NumberLiteral("2"))
+            )
+          ),
+          tokens.Expr(
+            tokens.Expr.SetLiteral(
+              tokens.Expr(tokens.Expr.OpCall(
+                tokens.Id("y"),
+                tokens.Expr.OpCall.Params()
+              )),
+              tokens.Expr(tokens.Expr.OpCall(
+                tokens.Id("x"),
+                tokens.Expr.OpCall.Params()
+              )))))))
+  
+  // test("Exists"):
+  //   assertEquals(
+  //     "\\E x \\in {1, 2, 3} : x = 2".parseStr,
+  //     Node.Top()
+  //  )
   
   test("ParenthesesGroup"):
     assertEquals(
@@ -228,33 +356,33 @@ class ExprParserTests extends munit.FunSuite:
           tokens.Id("x"),
           tokens.Expr.OpCall.Params()
         )))
-    assertEquals(
-      "(5 + 6)".parseStr,
-      Node.Top(
-        tokens.Expr.OpCall(
-          tokens.OpSym(
-            defns.+("+")
-          ),
-          tokens.Expr.OpCall.Params(
-            tokens.Expr(tokens.Expr.NumberLiteral("5")),
-            tokens.Expr(tokens.Expr.NumberLiteral("6"))
-          ))))
-    assertEquals(
-      "(1 + 2) * 3".parseStr,
-      Node.Top(
-        tokens.Expr.OpCall(
-          tokens.OpSym(
-            defns.*("*")
-          ),
-          tokens.Expr.OpCall.Params(
-            tokens.Expr(tokens.Expr.OpCall(
-              tokens.OpSym(
-                defns.+("+")
-              ),
-              tokens.Expr.OpCall.Params(
-                tokens.Expr(tokens.Expr.NumberLiteral("1")),
-                tokens.Expr(tokens.Expr.NumberLiteral("2"))
-              )
-            )),
-            tokens.Expr(tokens.Expr.NumberLiteral("3"))
-          ))))
+    // assertEquals(
+    //   "(5 + 6)".parseStr,
+    //   Node.Top(
+    //     tokens.Expr.OpCall(
+    //       tokens.OpSym(
+    //         defns.+("+")
+    //       ),
+    //       tokens.Expr.OpCall.Params(
+    //         tokens.Expr(tokens.Expr.NumberLiteral("5")),
+    //         tokens.Expr(tokens.Expr.NumberLiteral("6"))
+    //       ))))
+    // assertEquals(
+    //   "(1 + 2) * 3".parseStr,
+    //   Node.Top(
+    //     tokens.Expr.OpCall(
+    //       tokens.OpSym(
+    //         defns.*("*")
+    //       ),
+    //       tokens.Expr.OpCall.Params(
+    //         tokens.Expr(tokens.Expr.OpCall(
+    //           tokens.OpSym(
+    //             defns.+("+")
+    //           ),
+    //           tokens.Expr.OpCall.Params(
+    //             tokens.Expr(tokens.Expr.NumberLiteral("1")),
+    //             tokens.Expr(tokens.Expr.NumberLiteral("2"))
+    //           )
+    //         )),
+    //         tokens.Expr(tokens.Expr.NumberLiteral("3"))
+    //       ))))

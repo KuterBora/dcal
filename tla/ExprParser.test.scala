@@ -187,57 +187,51 @@ class ExprParserTests extends munit.FunSuite:
   //             ))))))
 
   test("Precedence: Infix Operators"):
+    // assertEquals(
+    //   "5 * 6 + 7".parseStr,
+    //   Node.Top(
+    //     tokens.Expr.OpCall(
+    //       tokens.OpSym(
+    //         defns.+("+")
+    //       ),
+    //       tokens.Expr.OpCall.Params(
+    //         tokens.Expr(
+    //           tokens.Expr.OpCall(
+    //             tokens.OpSym(
+    //               defns.*("*")
+    //             ),
+    //             tokens.Expr.OpCall.Params(
+    //               tokens.Expr(tokens.Expr.NumberLiteral("5")),
+    //               tokens.Expr(tokens.Expr.NumberLiteral("6"))
+    //             ))),
+    //             tokens.Expr(tokens.Expr.NumberLiteral("7"))))))
     assertEquals(
-      "5 * 6 + 7".parseStr,
+      "1 + 8 * 6 - 9 * 3".parseStr,
       Node.Top(
         tokens.Expr.OpCall(
-          tokens.OpSym(
-            defns.+("+")
-          ),
+          tokens.OpSym(defns.+("+")),
           tokens.Expr.OpCall.Params(
-            tokens.Expr(
-              tokens.Expr.OpCall(
-                tokens.OpSym(
-                  defns.*("*")
-                ),
-                tokens.Expr.OpCall.Params(
-                  tokens.Expr(tokens.Expr.NumberLiteral("5")),
-                  tokens.Expr(tokens.Expr.NumberLiteral("6"))
-                ))),
-                tokens.Expr(tokens.Expr.NumberLiteral("7"))))))
+            tokens.Expr(tokens.Expr.NumberLiteral("1")),
+            tokens.Expr(tokens.Expr.OpCall(
+              tokens.OpSym(defns.-("-")),
+              tokens.Expr.OpCall.Params(
+                tokens.Expr(tokens.Expr.OpCall(
+                  tokens.OpSym(defns.*("*")),
+                  tokens.Expr.OpCall.Params(
+                    tokens.Expr(tokens.Expr.NumberLiteral("8")),
+                    tokens.Expr(tokens.Expr.NumberLiteral("6"))
+                  ))),
+                tokens.Expr(tokens.Expr.OpCall(
+                  tokens.OpSym(defns.*("*")),
+                  tokens.Expr.OpCall.Params(
+                    tokens.Expr(tokens.Expr.NumberLiteral("9")),
+                    tokens.Expr(tokens.Expr.NumberLiteral("3"))
+                  ))))))))))
     // assertEquals(
-    //   "1 + 8 * 6 - 9 * 3".parseStr,
-    //   Node.Top())
-      // Node.Top(
-      //   tokens.Expr.OpCall(
-      //     tokens.OpSym(
-      //       defns.-("-")
-      //     ),
-      //     tokens.Expr.OpCall.Params(
-      //       tokens.Expr.OpCall(
-      //         tokens.OpSym(
-      //           defns.+("+")
-      //         ),
-      //         tokens.Expr.OpCall.Params(
-      //           tokens.Expr(tokens.Expr.NumberLiteral("1")),
-      //           tokens.Expr(
-      //             tokens.Expr.OpCall(
-      //               tokens.OpSym(
-      //                 defns.*("*")
-      //               ),
-      //               tokens.Expr.OpCall.Params(
-      //                 tokens.Expr(tokens.Expr.NumberLiteral("8")),
-      //                 tokens.Expr(tokens.Expr.NumberLiteral("6"))
-      //               ))))),
-      //       tokens.Expr(
-      //         tokens.Expr.OpCall(
-      //           tokens.OpSym(
-      //             defns.*("*")
-      //           ),
-      //           tokens.Expr.OpCall.Params(
-      //             tokens.Expr(tokens.Expr.NumberLiteral("9")),
-      //             tokens.Expr(tokens.Expr.NumberLiteral("3"))
-      //           )))))))
+    //   "1 + 1 + 3 * 4".parseStr,
+    //   Node.Top()
+    // )
+
   // test("FnCall"): ???: what about x[a, b, c] - needs to be parsed to (Expr, Expr) 
   //   assertEquals(
   //     "x[\"y\"]".parseStr,

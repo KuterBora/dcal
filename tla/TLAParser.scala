@@ -173,6 +173,69 @@ object TLAParser extends PassSeq:
       ).void
 
     nodeSpanMatchedBy(impl).map(RawExpression.apply)
+  end rawExpression
+
+  lazy val rawConjunction: SeqPattern[RawExpression] =
+    val simpleCases: SeqPattern[Unit] =
+      anyChild.void <* not(
+        tok(expressionDelimiters*)
+          | tok(defns./\)
+        // stop at operator definitions: all valid patterns leading to == here
+          | operatorDefnBeginnings
+      )
+
+    lazy val quantifierBound: SeqPattern[EmptyTuple] =
+      skip(
+        tok(TupleGroup).as(EmptyTuple)
+          | repeatedSepBy1(`,`)(Alpha)
+      )
+        ~ skip(defns.`\\in`)
+        ~ skip(defer(impl))
+        ~ trailing
+
+    lazy val quantifierBounds: SeqPattern[Unit] =
+      repeatedSepBy1(`,`)(quantifierBound).void
+
+    lazy val forallExists: SeqPattern[EmptyTuple] =
+      skip(
+        tok(LaTexLike).src("\\A") | tok(LaTexLike).src("\\AA") | tok(LaTexLike)
+          .src("\\E") | tok(LaTexLike).src("\\EE")
+      )
+        ~ skip(quantifierBounds | repeatedSepBy1(`,`)(Alpha))
+        ~ skip(`:`)
+        ~ trailing
+
+    lazy val choose: SeqPattern[EmptyTuple] =
+      skip(defns.CHOOSE)
+        ~ skip(quantifierBound | repeatedSepBy1(`,`)(Alpha))
+        ~ skip(`:`)
+        ~ trailing
+
+    lazy val lambda: SeqPattern[EmptyTuple] =
+      skip(defns.LAMBDA)
+        ~ skip(repeatedSepBy1(`,`)(Alpha))
+        ~ skip(`:`)
+        ~ trailing
+
+    // this is an over-approximation of what can show up
+    // in an identifier prefix
+    // TODO: why does the grammar make it look like it goes the other way round?
+    lazy val idFrag: SeqPattern[EmptyTuple] =
+      skip(`!`)
+        ~ skip(`:`)
+        ~ trailing
+
+    lazy val impl: SeqPattern[Unit] =
+      repeated1(
+        forallExists
+          | choose
+          | lambda
+          | idFrag
+          | simpleCases // last, otherwise it eats parts of the above
+      ).void
+
+    nodeSpanMatchedBy(impl).map(RawExpression.apply)
+  end rawConjunction
 
   val proofDelimiters: Seq[Token] = Seq(
     defns.ASSUME,

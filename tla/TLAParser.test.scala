@@ -14,7 +14,7 @@
 
 package distcompiler.tla
 
-import distcompiler.*
+import distcompiler.*, distcompiler.tla.ExprParser
 
 class TLAParserTests extends munit.FunSuite, test.WithTLACorpus:
   self =>
@@ -36,6 +36,7 @@ class TLAParserTests extends munit.FunSuite, test.WithTLACorpus:
       // )
       // , tracer = Manip.RewriteDebugTracer(os.pwd / "dbg_passes")
     )
+    ExprParser(top)
 
     // re-enable if interesting:
     // val folder = os.SubPath(file.subRelativeTo(clonesDir).segments.init)

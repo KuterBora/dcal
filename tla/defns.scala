@@ -74,7 +74,9 @@ object defns:
   case object PROPOSITION extends ReservedWord
   case object ONLY extends ReservedWord
 
-  sealed trait Operator extends Token, HasSpelling
+  sealed trait Operator extends Token, HasSpelling:
+    def highPrecedence: Int
+    def lowPrecedence: Int
 
   object Operator:
     lazy val instances: IArray[Operator] =
@@ -209,10 +211,12 @@ object defns:
   case object `\\supset` extends InfixOperator(5, 5)
   case object `%%` extends InfixOperator(10, 11, true)
 
-  sealed trait PostfixOperator(val predecence: Int) extends Operator
+  sealed trait PostfixOperator(val precedence: Int) extends Operator:
+    def highPrecedence: Int = precedence
+    def lowPrecedence: Int = precedence
   object PostfixOperator extends util.HasInstanceArray[PostfixOperator]
 
   case object `^+` extends PostfixOperator(15)
   case object `^*` extends PostfixOperator(15)
   case object `^#` extends PostfixOperator(15)
-  case object `'` extends PostfixOperator(15)
+  case object `'` extends PostfixOperator(15) 

@@ -296,10 +296,7 @@ val wellformed: Wellformed =
       t.Expr
     )
     t.Expr.Lambda.Params ::= repeated(
-      choice(
-        t.Id,
-        t.Order2
-      ),
+      t.Id,
       minCount = 1
     )
 

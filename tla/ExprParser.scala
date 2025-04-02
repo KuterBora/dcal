@@ -9,12 +9,135 @@ import distcompiler.tla.TLAReader
 import distcompiler.tla.TLAParser.rawExpression
 import distcompiler.Manip.ops.pass.bottomUp
 import distcompiler.tla.defns.THEOREM
+import distcompiler.tla.TLAParser.RawExpression
+import distcompiler.tla.TLAParser.rawConjunction
 
 object ExprParser extends PassSeq:
   import distcompiler.dsl.*
   import distcompiler.Builtin.{Error, SourceMarker}
   import TLAReader.*
   def inputWellformed: Wellformed = TLAParser.outputWellformed
+  // TODO: make private
+  def highPredInfixInfix(op: defns.InfixOperator): SeqPattern[SeqPattern.Fields[Tuple1[(Node, Node, Node)]]] = 
+    field(tokens.Expr.withChildren(
+      field(tokens.Expr.TmpInfixGroup.withChildren(
+        field(tok(defns.InfixOperator.instances*)
+          .filter(op2 => 
+            op2.token match
+              case op2Token : defns.InfixOperator =>
+                op.highPrecedence > op2Token.highPrecedence))
+        ~ field(tokens.Expr)
+        ~ field(tokens.Expr)
+        ~ eof
+      ))
+      ~ eof
+    ))
+  def highPredInfixUnary(op: defns.InfixOperator): SeqPattern[SeqPattern.Fields[Tuple1[(Node, Node)]]] =
+    field(tokens.Expr.withChildren(
+      field(tokens.Expr.TmpUnaryGroup.withChildren(
+        field(tok(defns.PrefixOperator.instances*)
+          .filter(op2 => 
+            op2.token match
+              case op2Token : defns.PrefixOperator =>
+                op.highPrecedence > op2Token.highPrecedence
+              case op2Token : defns.PostfixOperator =>
+                op.highPrecedence > op2Token.precedence))
+        ~ field(tokens.Expr)
+        ~ eof
+      ))
+      ~ eof
+      ))
+  def highPredUnaryInfix(op: defns.Operator): SeqPattern[SeqPattern.Fields[Tuple1[(Node, Node, Node)]]] =
+    field(tokens.Expr.withChildren(
+      field(tokens.Expr.TmpInfixGroup.withChildren(
+        field(tok(defns.InfixOperator.instances*)
+          .filter(op2 => 
+            op2.token match
+              case op2Token : defns.InfixOperator =>
+                op.highPrecedence > op2Token.highPrecedence))
+        ~ field(tokens.Expr)
+        ~ field(tokens.Expr)
+        ~ eof
+      ))
+      ~ eof
+    ))
+
+  def badPredInfixInfix(op: defns.InfixOperator): SeqPattern[SeqPattern.Fields[Tuple1[(Node, Node, Node)]]]  =
+    field(tokens.Expr.withChildren(
+      field(tokens.Expr.TmpInfixGroup.withChildren(
+        field(tok(defns.InfixOperator.instances*)
+          .filter(op2 => 
+            op2.token match
+              case op2Token : defns.InfixOperator =>
+                !((op.highPrecedence > op2Token.highPrecedence)
+                  || (op.lowPrecedence < op2Token.lowPrecedence)
+                  || ((op == op2Token) && op.isAssociative))
+          ))
+        ~ field(tokens.Expr)
+        ~ field(tokens.Expr)
+        ~ eof
+      ))
+      ~ eof
+    ))
+  def badPredInfixUnary(op: defns.InfixOperator): SeqPattern[SeqPattern.Fields[Tuple1[(Node, Node)]]] =
+    field(tokens.Expr.withChildren(
+      field(tokens.Expr.TmpUnaryGroup.withChildren(
+        field(tok(defns.PrefixOperator.instances*)
+          .filter(op2 => 
+            op2.token match
+              case op2Token : defns.PrefixOperator =>
+                !((op.highPrecedence > op2Token.highPrecedence)
+                  || (op.lowPrecedence < op2Token.lowPrecedence))
+              case op2Token : defns.PostfixOperator =>
+                !((op.highPrecedence > op2Token.precedence)
+                  || (op.lowPrecedence < op2Token.precedence))))
+        ~ field(tokens.Expr)
+        ~ eof
+      ))
+      ~ eof
+    ))
+  def badPredUnaryInfix(op: defns.Operator): SeqPattern[SeqPattern.Fields[Tuple1[(Node, Node, Node)]]] =
+    field(tokens.Expr.withChildren(
+      field(tokens.Expr.TmpInfixGroup.withChildren(
+        field(tok(defns.InfixOperator.instances*)
+          .filter(op2 => 
+            op2.token match
+              case op2Token : defns.InfixOperator =>
+                !((op.highPrecedence > op2Token.highPrecedence)
+                  || (op.lowPrecedence < op2Token.lowPrecedence))))
+        ~ field(tokens.Expr)
+        ~ field(tokens.Expr)
+        ~ eof
+      ))
+      ~ eof
+    ))
+
+  def matchQuantifierId() :SeqPattern[(Node, TLAParser.RawExpression)] =
+    parent(tokens.Expr) *>
+      field(TLAReader.Alpha)
+      ~ skip(defns.`\\in`)
+      ~ field(rawExpression)
+      ~ trailing
+  def matchQuantifierIds() :SeqPattern[(List[Node], TLAParser.RawExpression)] =
+    parent(tokens.Expr) *>
+      field(tok(TLAReader.TupleGroup).withChildren(
+        field(repeatedSepBy(`,`)(tok(TLAReader.Alpha)))
+        ~ eof
+        ))
+      ~ skip(defns.`\\in`)
+      ~ field(rawExpression)
+      ~ trailing
+
+
+  // TODO??? Pass structure
+
+  // conjunction alignment                         
+  // OpCall, QunatifierBound, Temporal Logic - set
+  // Literals, Let, If, Case, FnCall, TmpCall
+  // Resolve TmpCalls
+  // Check for assoc related errors  
+  // Resolve Ids        
+  // Remove parenthesis
 
   val buildExpressions = passDef:
     wellformed := prevWellformed.makeDerived:
@@ -33,20 +156,204 @@ object ExprParser extends PassSeq:
         tokens.Expr,
         tokens.Expr
       )
+      tokens.Expr.TmpUnaryGroup ::= fields(
+        choice((defns.PrefixOperator.instances ++ defns.PostfixOperator.instances)*),
+        tokens.Expr,
+      )
 
       tokens.Expr.deleteShape()
       tokens.Expr.importFrom(tla.wellformed)
-      tokens.Expr.addCases(tokens.Expr, tokens.Id, tokens.Expr.TmpInfixGroup) 
+      tokens.Expr.addCases(
+        tokens.Expr,
+        tokens.Expr.TmpInfixGroup,
+        tokens.Expr.TmpUnaryGroup)
 
     // TODO: assign the correct source with .like()
-    pass(once = false, strategy = pass.bottomUp)
+    // TODO??: find a more consistent order of passes 
+
+    pass(once = false, strategy = pass.bottomUp) // conjunction alignment
+      .rules:
+        on(
+          parent(tokens.Expr) *>
+            field(
+             (field(tok(defns./\))
+              ~ field(rawConjunction)
+              ~ field(tok(defns./\))
+              ~ field(rawConjunction)
+              ~ trailing
+            ).filter(things =>
+              things match
+                case (and1 : Node, r1, and2 : Node, r2) =>
+                  val s1 = and1.sourceRange
+                  val s2 = and2.sourceRange
+                  // println("\nCol 1: " + s1.source.lines.lineColAtOffset(s1.offset))
+                  // println("\nCol 2: " + s2.source.lines.lineColAtOffset(s2.offset))
+                  s1.source.lines.lineColAtOffset(s1.offset)._2 == s2.source.lines.lineColAtOffset(s2.offset)._2
+              ))
+            ~ eof
+        ).rewrite: (and1, r1, and2, r2) =>
+          splice(
+            tokens.Expr(
+              and1.unparent(),
+              tokens.Expr.OpCall(
+                tokens.OpSym(and2.unparent()),
+                tokens.Expr.OpCall.Params(
+                  r1.mkNode,
+                  r2.mkNode
+                ))))
+    *> pass(once = false, strategy = pass.bottomUp) 
+      // remove the leading /\, this should not be its own pass
+      // join with the prev once rawExpression2 is done
+      .rules:
+        on(
+          field(tokens.Expr.withChildren(
+            skip(defns./\)
+            ~ field(tokens.Expr)
+            ~ eof
+          ))
+          ~ eof
+        ).rewrite: expr =>
+           splice(expr.unparent())
+        | on(
+          field(tokens.Expr.withChildren(
+            skip(defns./\)
+            ~ field(rawExpression)
+            ~ eof
+          ))
+          ~ eof
+        ).rewrite: expr =>
+           splice(expr.mkNode)
+    *> pass(once = false, strategy = pass.bottomUp) // resolve quantifiers/opCall
+      .rules:
+        on(
+          parent(tokens.Expr) *> 
+            field(TLAReader.Alpha)
+            ~ field(TLAReader.ParenthesesGroup.withChildren(
+                field(repeatedSepBy(`,`)(rawExpression))
+                ~ eof
+                ))
+            ~ trailing
+        ).rewrite: (fun, args) =>
+          splice(
+            tokens.Expr(tokens.Expr.OpCall(
+              tokens.Id().like(fun),
+              tokens.Expr.OpCall.Params(
+                args.iterator.map(_.mkNode)
+              ))))
+        // TODO: Exists, Forall, Choose
+        // TODO: refactor and simplify
+        | on(
+          parent(tokens.Expr) *>
+            skip(tok(TLAReader.LaTexLike).src("\\E"))
+            ~ field(repeatedSepBy1(`,`)(matchQuantifierId()))
+            ~ skip(TLAReader.`:`)
+            ~ field(rawExpression)
+            ~ trailing
+        ).rewrite: (qBounds, expr) =>
+            splice(
+              tokens.Expr(tokens.Expr.Exists(
+                tokens.QuantifierBounds(
+                  qBounds.iterator.map(
+                    (id, qExpr) =>
+                      tokens.QuantifierBound(
+                        tokens.Id().like(id),
+                        qExpr.mkNode
+                      ))),
+                expr.mkNode
+              )))
+        | on(
+          parent(tokens.Expr) *>
+            skip(tok(TLAReader.LaTexLike).src("\\E"))
+            ~ field(repeatedSepBy1(`,`)(matchQuantifierIds()))
+            ~ skip(TLAReader.`:`)
+            ~ field(rawExpression)
+            ~ trailing
+        ).rewrite: (qBounds, expr) =>
+            splice(
+              tokens.Expr(tokens.Expr.Exists(
+                tokens.QuantifierBounds(
+                  qBounds.iterator.map(
+                    (ids, qExpr) =>
+                      tokens.QuantifierBound(
+                        tokens.Ids(
+                          ids.iterator.map(
+                            id => tokens.Id().like(id)
+                          )
+                        ),
+                        qExpr.mkNode
+                      ))),
+                expr.mkNode
+              )))
+        | on(
+          parent(tokens.Expr) *>
+            skip(tok(TLAReader.LaTexLike).src("\\A"))
+            ~ field(repeatedSepBy1(`,`)(matchQuantifierId()))
+            ~ skip(TLAReader.`:`)
+            ~ field(rawExpression)
+            ~ trailing
+        ).rewrite: (qBounds, expr) =>
+            splice(
+              tokens.Expr(tokens.Expr.Forall(
+                tokens.QuantifierBounds(
+                  qBounds.iterator.map(
+                    (id, qExpr) =>
+                      tokens.QuantifierBound(
+                        tokens.Id().like(id),
+                        qExpr.mkNode
+                      ))),
+                expr.mkNode
+              )))
+        | on(
+          parent(tokens.Expr) *>
+            skip(tok(TLAReader.LaTexLike).src("\\A"))
+            ~ field(repeatedSepBy1(`,`)(matchQuantifierIds()))
+            ~ skip(TLAReader.`:`)
+            ~ field(rawExpression)
+            ~ trailing
+        ).rewrite: (qBounds, expr) =>
+            splice(
+              tokens.Expr(tokens.Expr.Forall(
+                tokens.QuantifierBounds(
+                  qBounds.iterator.map(
+                    (ids, qExpr) =>
+                      tokens.QuantifierBound(
+                        tokens.Ids(
+                          ids.iterator.map(
+                            id => tokens.Id().like(id)
+                          )
+                        ),
+                        qExpr.mkNode
+                      ))),
+                expr.mkNode
+              )))
+        | on(
+          parent(tokens.Expr) *>
+            skip(tok(defns.CHOOSE))
+            ~ field(matchQuantifierId())
+            ~ skip(TLAReader.`:`)
+            ~ field(rawExpression)
+            ~ trailing
+        ).rewrite: (qBound, expr) =>
+            qBound match
+              case (id, qExpr) =>
+                splice(
+                  tokens.Expr(tokens.Expr.Choose(
+                    tokens.QuantifierBound(
+                      tokens.Id().like(id),
+                      qExpr.mkNode
+                    ),
+                    expr.mkNode
+                  )))
+    // TODO: tuple qbound
+    //       id nil
+    //       tuple nil
+    *> pass(once = false, strategy = pass.bottomUp)
       .rules:
         on(
           parent(tokens.Expr) *>
             TLAReader.Alpha
         ).rewrite: name =>
           splice(
-            // TODO???
             tokens.Expr(
               tokens.Id().like(name)
             ))
@@ -145,27 +452,61 @@ object ExprParser extends PassSeq:
                       tokens.Id().like(alpha.unparent()),
                       expr.mkNode
                     )))))
-        // TODO: all OpCall
         | on( 
           parent(tokens.Expr) *>
             field(tokens.Expr)
-            ~ field(tok(defns.InfixOperator.instances.filter(i => i.highPrecedence < 17)*)) // TODO: probably dont do this filter
+            ~ field(tok(defns.InfixOperator.instances.filter(_ != defns.`.`)*))
             ~ field(tokens.Expr)
-            ~ eof // eof here?
+            ~ eof
         ).rewrite: (left, op, right) =>
-          println("\nFound Op: " + op + "Rewriting as: \n")
-          println(tokens.Expr(tokens.Expr.TmpInfixGroup(
-              op.unparent(),
-              left.unparent(),
-              right.unparent()
-            )))
           splice(
             tokens.Expr(tokens.Expr.TmpInfixGroup(
               op.unparent(),
               left.unparent(),
               right.unparent()
             )))
-        // TODO: Fn Call
+        | on(
+          parent(tokens.Expr) *>
+          field(tok(defns.PrefixOperator.instances*))
+          ~ field(tokens.Expr)
+          ~ eof
+        ).rewrite: (op, expr) =>
+          splice(
+            tokens.Expr(tokens.Expr.TmpUnaryGroup(
+              op.unparent(),
+              expr.unparent(),
+            )))
+        | on(
+          parent(tokens.Expr) *>
+          field(tokens.Expr)
+          ~ field(tok(defns.PostfixOperator.instances*))
+          ~ trailing
+        ).rewrite: (expr, op) =>
+          splice(
+            tokens.Expr(tokens.Expr.TmpUnaryGroup(
+              op.unparent(),
+              expr.unparent(),
+            )))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr)
+            ~ field(tok(TLAReader.SqBracketsGroup) *>
+              children:
+                field(repeatedSepBy(`,`)(rawExpression))
+                ~ eof
+                )
+            ~ eof 
+        ).rewrite: (callee, args) =>
+          splice(
+            tokens.Expr(tokens.Expr.FnCall(
+              callee.unparent(),
+              args match
+                case List(expr) =>
+                  expr.mkNode
+                case _ =>
+                  tokens.Expr(tokens.Expr.TupleLiteral(
+                    args.iterator.map(_.mkNode)
+                  )))))
         | on(
           parent(tokens.Expr) *>
             skip(defns.CASE)
@@ -209,7 +550,7 @@ object ExprParser extends PassSeq:
               children(
                 field(
                   repeated1:
-                    tok(tokens.Operator) // ???: is this correct usage of |
+                    tok(tokens.Operator)
                       | tok(tokens.ModuleDefinition)
                       | tok(tokens.Recursive)
                 ) 
@@ -228,22 +569,14 @@ object ExprParser extends PassSeq:
                   expr.unparent()
                 )).like(let._1)
             )
-        // ???: Exists and Forall
-        // | on(
-        //   parent(tokens.Expr) *>
-        //     field(TLAReader.LaTexLike)
-        //     ~ field(tokens.Expr)
-        //     ~ field(TLAReader.`:`)
-        //     ~ field(tokens.Expr)
-        //     ~ eof
-        // ).rewrite: thing =>
-        //     ???
         // TODO: Function
-        // TODO: SetComprehension
-        // TODO: SetRefinement
+        // TODO: SetComprehension {expr : x \in y}
+        // TODO: SetRefinement   {x \in y : bool} 
+        // {x \in y : p \in q} TODO: look in the book
         // TODO: Choose
         // TODO: Except
         // TODO: Lambda
+        // TODO a \x b \ a
         | on(
           parent(tokens.Expr) *>
             tok(TLAReader.ParenthesesGroup) *>
@@ -270,222 +603,7 @@ object ExprParser extends PassSeq:
               t.unparent(),
               f.unparent()
             ))
-  end buildExpressions
-
-  val orderOperations = passDef:
-    wellformed := prevWellformed.makeDerived:
-      tokens.Expr.TmpInfixGroup.Checked ::= fields(
-        choice(defns.InfixOperator.instances*),
-        tokens.Expr,
-        tokens.Expr
-      )
-      tokens.Expr.removeCases(tokens.Expr.TmpInfixGroup)
-      tokens.Expr.addCases(tokens.Expr.TmpInfixGroup.Checked) 
-    
-    pass(once = false, strategy = pass.bottomUp)
-      .rules:
-        on(
-          parent(tokens.Expr) *>
-            field(tokens.Expr.TmpInfixGroup.withChildren(
-              field(tok(defns.InfixOperator.instances*))
-              ~ field(tokens.Expr.withChildren(
-                field(tokens.Expr.TmpInfixGroup.Checked.withChildren(
-                  field(tok(defns.InfixOperator.instances*))
-                  ~ field(tokens.Expr)
-                  ~ field(tokens.Expr)
-                  ~ eof
-                ))
-                ~ eof
-              ))
-              ~ field(tokens.Expr)
-              ~ eof
-            ))
-            ~ eof
-        ).rewrite: (cur_op, left, right) =>
-          left match
-            case (op, expr1, expr2) =>
-              (cur_op.token, op.token) match
-                case (cur_tok: defns.InfixOperator, child_tok: defns.InfixOperator) =>
-                  if (cur_tok.highPrecedence > child_tok.highPrecedence) {
-                    println("\nbad order: rewriting left in: ")
-                    println("\ncur_op: " + cur_op)
-                    println("\nleft: " + left)
-                    println("\nright: " + right)
-                    println("\nas: " +
-                      tokens.Expr.TmpInfixGroup(
-                        op.unparent(),
-                        expr1.unparent(),
-                        tokens.Expr(tokens.Expr.TmpInfixGroup(
-                          cur_op.unparent(),
-                          expr2.unparent(),
-                          right.unparent()
-                        ))))
-                    splice(
-                      tokens.Expr.TmpInfixGroup(
-                        op.unparent(),
-                        expr1.unparent(),
-                        tokens.Expr(tokens.Expr.TmpInfixGroup(
-                          cur_op.unparent(),
-                          expr2.unparent(),
-                          right.unparent()
-                        ))))
-                  } else if (cur_tok.lowPrecedence < child_tok.lowPrecedence) {
-                    println("\ngood order: Checked Left")
-                    splice(
-                      tokens.Expr.TmpInfixGroup.Checked(
-                        cur_op.unparent(),
-                        tokens.Expr(tokens.Expr.TmpInfixGroup.Checked(
-                          op.unparent(),
-                          expr1.unparent(),
-                          expr2.unparent()
-                        )),
-                        right.unparent()
-                      ))
-                  } else if (cur_tok.isAssociative && child_tok.isAssociative) {
-                    println("\nassoc found: Checked Left")
-                    splice(
-                      tokens.Expr.TmpInfixGroup.Checked(
-                        cur_op.unparent(),
-                        tokens.Expr(tokens.Expr.TmpInfixGroup.Checked(
-                          op.unparent(),
-                          expr1.unparent(),
-                          expr2.unparent()
-                        )),
-                        right.unparent()
-                      ))
-                  } else {
-                    println("\nError")
-                    splice(tokens.Expr.SomeKindOfError())
-                  }
-        | on(
-          parent(tokens.Expr) *>
-            field(tokens.Expr.TmpInfixGroup.withChildren(
-              field(tok(defns.InfixOperator.instances*))
-              ~ field(tokens.Expr)
-              ~ field(tokens.Expr.withChildren(
-                field(tokens.Expr.TmpInfixGroup.Checked.withChildren(
-                  field(tok(defns.InfixOperator.instances*))
-                  ~ field(tokens.Expr)
-                  ~ field(tokens.Expr)
-                  ~ eof
-                ))
-                ~ eof
-              ))
-              ~ eof
-            ))
-            ~ eof
-        ).rewrite: (cur_op, left, right) =>
-          right match
-            case (op, expr1, expr2) =>
-              (cur_op.token, op.token) match
-                case (cur_tok: defns.InfixOperator, child_tok: defns.InfixOperator) =>
-                  if (cur_tok.highPrecedence > child_tok.highPrecedence) {
-                    println("\nbad order: rewriting right in: ")
-                    println("\ncur_op: " + cur_op)
-                    println("\nleft: " + left)
-                    println("\nright: " + right)
-                    println("\n as:" + 
-                      tokens.Expr.TmpInfixGroup(
-                        op.unparent(),
-                        tokens.Expr(tokens.Expr.TmpInfixGroup(
-                          cur_op.unparent(),
-                          left.unparent(),
-                          expr1.unparent()
-                        )),
-                        expr2.unparent()))
-                    splice(
-                      tokens.Expr.TmpInfixGroup(
-                        op.unparent(),
-                        tokens.Expr(tokens.Expr.TmpInfixGroup(
-                          cur_op.unparent(),
-                          left.unparent(),
-                          expr1.unparent()
-                        )),
-                        expr2.unparent()))
-                  } else if (cur_tok.lowPrecedence < child_tok.lowPrecedence) {
-                    println("\ngood order: Checked Right")
-                    splice(
-                      tokens.Expr.TmpInfixGroup.Checked(
-                        cur_op.unparent(),
-                        left.unparent(),
-                        tokens.Expr(tokens.Expr.TmpInfixGroup.Checked(
-                          op.unparent(),
-                          expr1.unparent(),
-                          expr2.unparent()
-                        ))))
-                  } else if (cur_tok.isAssociative && child_tok.isAssociative) {
-                    println("\nassoc found: Checked Right")
-                    splice(
-                      tokens.Expr.TmpInfixGroup.Checked(
-                        cur_op.unparent(),
-                        left.unparent(),
-                        tokens.Expr(tokens.Expr.TmpInfixGroup.Checked(
-                          op.unparent(),
-                          expr1.unparent(),
-                          expr2.unparent()
-                        ))))
-                  } else {
-                    println("\nError")
-                    splice(tokens.Expr.SomeKindOfError())
-                  }
-        | on(
-            parent(tokens.Expr) *>
-            field(tokens.Expr.TmpInfixGroup.withChildren(
-              field(tok(defns.InfixOperator.instances*))
-              ~ field(tokens.Expr)
-              ~ field(tokens.Expr)
-              ~ trailing
-            ))
-              ~ trailing
-          ).rewrite: (op, left, right) =>
-            println("\nchecking off :")
-            println("\nOp: " + op)
-            println("\nLeft: " + left)
-            println("\nRight: " + right)
-            println("\nAs: " +
-              tokens.Expr.TmpInfixGroup.Checked(
-                op.unparent(),
-                left.unparent(),
-                right.unparent()
-              ))
-            splice(
-              tokens.Expr.TmpInfixGroup.Checked(
-                op.unparent(),
-                left.unparent(),
-                right.unparent()
-              ))
-  end orderOperations
-
-  val resolveOperations = passDef:
-    wellformed := prevWellformed.makeDerived:
-      tokens.Expr.removeCases(tokens.Expr.TmpInfixGroup.Checked)
-    
-    pass(once = false, strategy = pass.bottomUp)
-      .rules:
-        on(
-            parent(tokens.Expr) *>
-              field(tokens.Expr.TmpInfixGroup.Checked.withChildren(
-                field(tok(defns.InfixOperator.instances*))
-                ~ field(tokens.Expr)
-                ~ field(tokens.Expr)
-                ~ eof
-              ))
-              ~ eof
-          ).rewrite: (op, right, left) =>
-            splice(
-              tokens.Expr(tokens.Expr.OpCall(
-                tokens.OpSym(op.unparent()),
-                tokens.Expr.OpCall.Params(
-                  right.unparent(),
-                  left.unparent()
-                ))))
-  end resolveOperations
-
-  val resolveAlphas = passDef:
-    wellformed := prevWellformed.makeDerived:
-      tokens.Expr.removeCases(tokens.Id)
-    
-    pass(once = false, strategy = pass.bottomUp)
+    *> pass(once = false, strategy = pass.bottomUp) // resolve Alphas
       .rules:
         on(
           parent(tokens.Expr) *>
@@ -497,7 +615,360 @@ object ExprParser extends PassSeq:
                 name.unparent(),
                 tokens.Expr.OpCall.Params(),
               )))
-  end resolveAlphas
+  end buildExpressions
+
+  val reorderOperations = passDef:
+    wellformed := prevWellformed.makeDerived:
+      tokens.Expr.removeCases(
+        tokens.Expr.TmpInfixGroup,
+        tokens.Expr.TmpUnaryGroup)
+    pass(once = false, strategy = pass.bottomUp)
+      .rules:
+        on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren:
+                defns.InfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ highPredInfixInfix(op)
+                    ~ field(tokens.Expr)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, left, right) =>
+          left match
+            case (op, expr1, expr2) =>
+              splice(
+                tokens.Expr.TmpInfixGroup(
+                  op.unparent(),
+                  expr1.unparent(),
+                  tokens.Expr(tokens.Expr.TmpInfixGroup(
+                    curOp.unparent(),
+                    expr2.unparent(),
+                    right.unparent()
+                  ))))
+        |  on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren:
+                defns.InfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ field(tokens.Expr)
+                    ~ highPredInfixInfix(op)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, left, right) =>
+          right match
+            case (op, expr1, expr2) =>
+              splice(
+                tokens.Expr.TmpInfixGroup(
+                  op.unparent(),
+                  tokens.Expr(tokens.Expr.TmpInfixGroup(
+                    curOp.unparent(),
+                    left.unparent(),
+                    expr1.unparent()
+                  )),
+                  expr2.unparent()))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren:
+                defns.InfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ highPredInfixUnary(op)
+                    ~ field(tokens.Expr)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, left, right) =>
+          left match
+            case (op, expr) =>
+              splice(
+                tokens.Expr.TmpUnaryGroup(
+                  op.unparent(),
+                  tokens.Expr(tokens.Expr.TmpInfixGroup(
+                    curOp.unparent(),
+                    expr.unparent(),
+                    right.unparent()
+                  ))))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren:
+                defns.InfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ field(tokens.Expr)
+                    ~ highPredInfixUnary(op)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, left, right) =>
+          right match
+            case (op, expr) =>
+              splice(
+                tokens.Expr.TmpUnaryGroup(
+                  op.unparent(),
+                  tokens.Expr(tokens.Expr.TmpInfixGroup(
+                    curOp.unparent(),
+                    left.unparent(),
+                    expr.unparent()
+                  ))))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpUnaryGroup.withChildren:
+                defns.PrefixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ highPredUnaryInfix(op)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, infixGroup) =>
+          infixGroup match
+            case (op, left, right) =>
+              splice(
+                tokens.Expr.TmpInfixGroup(
+                  op.unparent(),
+                  tokens.Expr(tokens.Expr.TmpUnaryGroup(
+                    curOp.unparent(),
+                    left.unparent()
+                  )),
+                  right.unparent()))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpUnaryGroup.withChildren:
+                defns.PostfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ highPredUnaryInfix(op)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, infixGroup) =>
+          infixGroup match
+            case (op, left, right) =>
+              splice(
+                tokens.Expr.TmpInfixGroup(
+                  op.unparent(),
+                  left.unparent(),
+                  tokens.Expr(tokens.Expr.TmpUnaryGroup(
+                    curOp.unparent(),
+                    right.unparent()
+                  ))))
+    *> pass(once = false, strategy = pass.bottomUp) // assoc related errors
+      .rules:
+        on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren:
+                defns.InfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ badPredInfixInfix(op)
+                    ~ field(tokens.Expr)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, left, right) =>
+          left match
+            case (op, expr1, expr2) =>
+              splice(
+                Node(Builtin.Error)(
+                  Builtin.Error.Message( // todo: use src
+                    s"$curOp and $op must have different precedence, or be duplicates of an associative operator."
+                  ),
+                  Builtin.Error.AST(
+                    tokens.Expr.TmpInfixGroup(
+                      curOp.unparent(),
+                      tokens.Expr.TmpInfixGroup(
+                        op.unparent(),
+                        expr1.unparent(),
+                        expr2.unparent()
+                      ),
+                      right.unparent()))))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren:
+                defns.InfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ field(tokens.Expr)
+                    ~ badPredInfixInfix((op))
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, left, right) =>
+          right match
+            case (op, expr1, expr2) =>
+              splice(
+                Node(Builtin.Error)(
+                  Builtin.Error.Message(
+                    s"$curOp and $op must have different precedence, or be duplicates of an associative operator."
+                  ),
+                  Builtin.Error.AST(
+                    tokens.Expr.TmpInfixGroup(
+                      curOp.unparent(),
+                      left.unparent(),
+                      tokens.Expr.TmpInfixGroup(
+                        op.unparent(),
+                        expr1.unparent(),
+                        expr2.unparent()
+                      )))))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren:
+                defns.InfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ badPredInfixUnary(op)
+                    ~ field(tokens.Expr)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, left, right) =>
+          left match
+            case (op, expr) =>
+              splice(
+                Node(Builtin.Error)(
+                  Builtin.Error.Message(
+                    s"$curOp and $op must have different precedence."
+                  ),
+                  Builtin.Error.AST(
+                    tokens.Expr.TmpInfixGroup(
+                      curOp.unparent(),
+                      tokens.Expr.TmpUnaryGroup(
+                        op.unparent(),
+                        expr.unparent(),
+                      )),
+                      right.unparent()
+                    )))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren:
+                defns.InfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ field(tokens.Expr)
+                    ~ badPredInfixUnary(op)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, left, right) =>
+          right match
+            case (op, expr) =>
+              splice(
+                Node(Builtin.Error)(
+                  Builtin.Error.Message(
+                    s"$curOp and $op must have different precedence."
+                  ),
+                  Builtin.Error.AST(
+                    tokens.Expr.TmpInfixGroup(
+                      curOp.unparent(),
+                      left.unparent(),
+                      tokens.Expr.TmpUnaryGroup(
+                        op.unparent(),
+                        expr.unparent()
+                      )))))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpUnaryGroup.withChildren:
+                defns.PrefixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ badPredUnaryInfix(op)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, infixGroup) =>
+          infixGroup match
+            case (op, left, right) =>
+              splice(
+                Node(Builtin.Error)(
+                  Builtin.Error.Message(
+                    s"$curOp and $op must have different precedence."
+                  ),
+                  Builtin.Error.AST(
+                    tokens.Expr.UnaryGroup(
+                      curOp.unparent(),
+                      tokens.Expr.TmpInfixGroup(
+                        op.unparent(),
+                        left.unparent(),
+                        right.unparent()
+                      )))))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpUnaryGroup.withChildren:
+                defns.PostfixOperator.instances
+                  .iterator
+                  .map: op =>
+                    field(op)
+                    ~ badPredUnaryInfix(op)
+                    ~ eof
+                  .reduce(_ | _))
+            ~ eof
+        ).rewrite: (curOp, infixGroup) =>
+          infixGroup match
+            case (op, left, right) =>
+              splice(
+                Node(Builtin.Error)(
+                  Builtin.Error.Message(
+                    s"$curOp and $op must have different precedence."
+                  ),
+                  Builtin.Error.AST(
+                    tokens.Expr.UnaryGroup(
+                      curOp.unparent(),
+                      tokens.Expr.TmpInfixGroup(
+                        op.unparent(),
+                        left.unparent(),
+                        right.unparent()
+                      )))))
+    *> pass(once = false, strategy = pass.bottomUp)
+      .rules:
+        on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpInfixGroup.withChildren(
+              field(tok(defns.InfixOperator.instances*))
+              ~ field(tokens.Expr)
+              ~ field(tokens.Expr)
+              ~ eof
+            ))
+            ~ eof
+        ).rewrite: (op, right, left) =>
+          splice(
+            tokens.Expr(tokens.Expr.OpCall(
+              tokens.OpSym(op.unparent()),
+              tokens.Expr.OpCall.Params(
+                right.unparent(),
+                left.unparent()
+              ))))
+        | on(
+          parent(tokens.Expr) *>
+            field(tokens.Expr.TmpUnaryGroup.withChildren(
+              field(tok(defns.PrefixOperator.instances*) 
+                | tok(defns.PostfixOperator.instances*))
+              ~ field(tokens.Expr)
+              ~ eof
+            ))
+            ~ eof
+        ).rewrite: (op, expr) =>
+          splice(
+            tokens.Expr(tokens.Expr.OpCall(
+              tokens.OpSym(op.unparent()),
+              tokens.Expr.OpCall.Params(
+                expr.unparent(),
+              ))))
+  end reorderOperations
 
   val removeNestedExpr = passDef:
     wellformed := prevWellformed.makeDerived:

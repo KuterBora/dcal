@@ -111,7 +111,6 @@ object ExprParser extends PassSeq:
       ))
       ~ eof
     ))
-
   def matchQuantifierId() :SeqPattern[(Node, TLAParser.RawExpression)] =
     parent(tokens.Expr) *>
       field(TLAReader.Alpha)
@@ -126,19 +125,11 @@ object ExprParser extends PassSeq:
         ))
       ~ skip(defns.`\\in`)
       ~ field(rawExpression)
-      ~ trailing
+      ~ trailing  
 
-
-  // TODO??? Pass structure
-
-  // conjunction alignment                         
-  // OpCall, QunatifierBound, Temporal Logic - set
-  // Literals, Let, If, Case, FnCall, TmpCall
-  // Resolve TmpCalls
-  // Check for assoc related errors  
-  // Resolve Ids        
-  // Remove parenthesis
-
+  // replace all tokens.Expr(contents...) with
+  // tokens.Expr(tokens.ExprTry, contents...)
+  
   val buildExpressions = passDef:
     wellformed := prevWellformed.makeDerived:
       val removedCases = Seq(
@@ -169,18 +160,16 @@ object ExprParser extends PassSeq:
         tokens.Expr.TmpUnaryGroup)
 
     // TODO: assign the correct source with .like()
-    // TODO??: find a more consistent order of passes 
 
     pass(once = false, strategy = pass.bottomUp) // conjunction alignment
       .rules:
         on(
           parent(tokens.Expr) *>
-            field(
-             (field(tok(defns./\))
-              ~ field(rawConjunction)
+            (field(tok(defns./\))
+              ~ field(rawConjunction(1))
               ~ field(tok(defns./\))
-              ~ field(rawConjunction)
-              ~ trailing
+              ~ field(rawConjunction(1))
+              ~ eof
             ).filter(things =>
               things match
                 case (and1 : Node, r1, and2 : Node, r2) =>
@@ -189,32 +178,29 @@ object ExprParser extends PassSeq:
                   // println("\nCol 1: " + s1.source.lines.lineColAtOffset(s1.offset))
                   // println("\nCol 2: " + s2.source.lines.lineColAtOffset(s2.offset))
                   s1.source.lines.lineColAtOffset(s1.offset)._2 == s2.source.lines.lineColAtOffset(s2.offset)._2
-              ))
-            ~ eof
+              )
         ).rewrite: (and1, r1, and2, r2) =>
           splice(
+            and1.unparent(),
             tokens.Expr(
-              and1.unparent(),
               tokens.Expr.OpCall(
                 tokens.OpSym(and2.unparent()),
                 tokens.Expr.OpCall.Params(
                   r1.mkNode,
                   r2.mkNode
                 ))))
-    *> pass(once = false, strategy = pass.bottomUp) 
-      // remove the leading /\, this should not be its own pass
-      // join with the prev once rawExpression2 is done
+    *> pass(once = false, strategy = pass.bottomUp) // remove leading /\, remove paren
       .rules:
+        // on(
+        //   field(tokens.Expr.withChildren(
+        //     skip(defns./\)
+        //     ~ field(tokens.Expr)
+        //     ~ eof
+        //   ))
+        //   ~ eof
+        // ).rewrite: expr =>
+        //    splice(expr.unparent())
         on(
-          field(tokens.Expr.withChildren(
-            skip(defns./\)
-            ~ field(tokens.Expr)
-            ~ eof
-          ))
-          ~ eof
-        ).rewrite: expr =>
-           splice(expr.unparent())
-        | on(
           field(tokens.Expr.withChildren(
             skip(defns./\)
             ~ field(rawExpression)
@@ -223,6 +209,16 @@ object ExprParser extends PassSeq:
           ~ eof
         ).rewrite: expr =>
            splice(expr.mkNode)
+        | on(
+          parent(tokens.Expr) *>
+            tok(TLAReader.ParenthesesGroup) *>
+              children:
+                field(rawExpression)
+                ~ eof
+        ).rewrite: rawExpr =>
+          splice(
+            tokens.Expr(rawExpr.mkNode)
+          )
     *> pass(once = false, strategy = pass.bottomUp) // resolve quantifiers/opCall
       .rules:
         on(
@@ -577,16 +573,6 @@ object ExprParser extends PassSeq:
         // TODO: Except
         // TODO: Lambda
         // TODO a \x b \ a
-        | on(
-          parent(tokens.Expr) *>
-            tok(TLAReader.ParenthesesGroup) *>
-              children:
-                field(rawExpression)
-                ~ eof
-        ).rewrite: expr =>
-          splice(
-            tokens.Expr(expr.mkNode)
-          )
         | on(
           parent(tokens.Expr) *>
             skip(defns.IF)

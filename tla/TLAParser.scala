@@ -175,11 +175,13 @@ object TLAParser extends PassSeq:
     nodeSpanMatchedBy(impl).map(RawExpression.apply)
   end rawExpression
 
-  lazy val rawConjunction: SeqPattern[RawExpression] =
+  def rawConjunction(col : Integer): SeqPattern[RawExpression] =
     val simpleCases: SeqPattern[Unit] =
       anyChild.void <* not(
         tok(expressionDelimiters*)
-          | tok(defns./\)
+          | tok(defns./\).filter(node => 
+              val s = node.sourceRange
+              s.source.lines.lineColAtOffset(s.offset)._2 > col)
         // stop at operator definitions: all valid patterns leading to == here
           | operatorDefnBeginnings
       )

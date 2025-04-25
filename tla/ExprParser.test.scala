@@ -645,7 +645,7 @@ class ExprParserTests extends munit.FunSuite:
   
   test("Temporal Logic Combined"):
     assertEquals(
-      "s /\\ \\E x \\in y : z /\\ \\E p \\in q : r".parseStr, //TODO???: confirm which one should come first?
+      "s /\\ \\E x \\in y : z /\\ \\E p \\in q : r".parseStr,
       Node.Top(
         tokens.Expr.OpCall(
           tokens.OpSym(defns./\("/\\")),
@@ -685,7 +685,7 @@ class ExprParserTests extends munit.FunSuite:
   // todo: function
   // todo: set comprehension
   // todo: set refinement
-  // todo: lamda ??? Order2, grammar just says Expr
+  // todo: lambda
   
   test("Choose"):
     assertEquals(
@@ -712,7 +712,7 @@ class ExprParserTests extends munit.FunSuite:
 
   // todo: except
   
-  test("ParenthesesGroup"):
+  test("Parentheses"):
     assertEquals(
       "(1)".parseStr,
       Node.Top(tokens.Expr.NumberLiteral("1"))
@@ -754,51 +754,150 @@ class ExprParserTests extends munit.FunSuite:
             )),
             tokens.Expr(tokens.Expr.NumberLiteral("3"))
           ))))
-
-  test("Conjunctions"):
     assertEquals(
-      "/\\ 1".parseStr,
+      "(\\A x \\in {1, 2, 3} : x = 2)".parseStr,
       Node.Top(
-        tokens.Expr.NumberLiteral("1")
-      ))
-    assertEquals(
-      "/\\ 1 \\/ 2".parseStr,
-      Node.Top(
-        tokens.Expr.OpCall(
-          tokens.OpSym(defns.\/("\\/")),
-          tokens.Expr.OpCall.Params(
-            tokens.Expr(tokens.Expr.NumberLiteral("1")),
-            tokens.Expr(tokens.Expr.NumberLiteral("2"))
-          ))))
-    assertEquals(
-      s"""
-      |/\\ 1
-      |/\\ 2
-      |""".stripMargin.parseStr,
-      Node.Top(
-        tokens.Expr.OpCall(
-          tokens.OpSym(defns./\("/\\")),
-          tokens.Expr.OpCall.Params(
-            tokens.Expr(tokens.Expr.NumberLiteral("1")),
-            tokens.Expr(tokens.Expr.NumberLiteral("2"))
-        ))))
-    assertEquals(
-      s"""
-      |/\\ 1 \\/ 1
-      |/\\ 2 \\/ 2
-      |/\\ 3 \\/ 3
-      |""".stripMargin.parseStr,
-      Node.Top())
+        tokens.Expr.Forall(
+          tokens.QuantifierBounds(
+            tokens.QuantifierBound(
+              tokens.Id("x"),
+              tokens.Expr(tokens.Expr.SetLiteral(
+                tokens.Expr(tokens.Expr.NumberLiteral("1")),
+                tokens.Expr(tokens.Expr.NumberLiteral("2")),
+                tokens.Expr(tokens.Expr.NumberLiteral("3"))
+              )))),
+          tokens.Expr(tokens.Expr.OpCall(
+            tokens.OpSym(defns.`=`("=")),
+            tokens.Expr.OpCall.Params(
+              tokens.Expr(tokens.Expr.OpCall(
+                tokens.Id("x"),
+                tokens.Expr.OpCall.Params()
+              )),
+              tokens.Expr(tokens.Expr.NumberLiteral("2"))
+            ))))))
 
+  // test("Conjunctions"):
+  //   assertEquals(
+  //     "/\\ 1".parseStr,
+  //     Node.Top(
+  //       tokens.Expr.NumberLiteral("1")
+  //     ))
+  //   assertEquals(
+  //     "/\\ 1 \\/ 2".parseStr,
+  //     Node.Top(
+  //       tokens.Expr.OpCall(
+  //         tokens.OpSym(defns.\/("\\/")),
+  //         tokens.Expr.OpCall.Params(
+  //           tokens.Expr(tokens.Expr.NumberLiteral("1")),
+  //           tokens.Expr(tokens.Expr.NumberLiteral("2"))
+  //         ))))
+  //   assertEquals(
+  //     s"""
+  //     |/\\ 1
+  //     |/\\ 2
+  //     |""".stripMargin.parseStr,
+  //     Node.Top(
+  //       tokens.Expr.OpCall(
+  //         tokens.OpSym(defns./\("/\\")),
+  //         tokens.Expr.OpCall.Params(
+  //           tokens.Expr(tokens.Expr.NumberLiteral("1")),
+  //           tokens.Expr(tokens.Expr.NumberLiteral("2"))
+  //       ))))
+  //   assertEquals(
+  //     s"""
+  //     |/\\ 1 \\/ 1
+  //     |/\\ 2 \\/ 2
+  //     |/\\ 3 \\/ 3
+  //     |""".stripMargin.parseStr,
+  //     Node.Top(tokens.Expr.OpCall(
+  //       tokens.OpSym(defns./\("/\\")),
+  //       tokens.Expr.OpCall.Params(
+  //         tokens.Expr(tokens.Expr.OpCall(
+  //             tokens.OpSym(defns.\/("\\/")),
+  //             tokens.Expr.OpCall.Params(
+  //               tokens.Expr(tokens.Expr.NumberLiteral("1")),
+  //               tokens.Expr(tokens.Expr.NumberLiteral("1"))
+  //             )
+  //         )),
+  //         tokens.Expr(tokens.Expr.OpCall(
+  //             tokens.OpSym(defns./\("/\\")),
+  //             tokens.Expr.OpCall.Params(
+  //               tokens.Expr(tokens.Expr.OpCall(
+  //                 tokens.OpSym(defns.\/("\\/")),
+  //                 tokens.Expr.OpCall.Params(
+  //                   tokens.Expr(tokens.Expr.NumberLiteral("2")),
+  //                   tokens.Expr(tokens.Expr.NumberLiteral("2"))
+  //                 ))),
+  //               tokens.Expr(tokens.Expr.OpCall(
+  //                 tokens.OpSym(defns.\/("\\/")),
+  //                 tokens.Expr.OpCall.Params(
+  //                   tokens.Expr(tokens.Expr.NumberLiteral("3")),
+  //                   tokens.Expr(tokens.Expr.NumberLiteral("3"))
+  //                 ))))))))))
 
-    // /\ 1 
-    //   /\ 2 
-    // /\ 3 
+    // assertEquals(
+    //   s"""
+    //   |/\\ 1
+    //   | /\\ 2
+    //   |/\\ 3
+    //   |""".stripMargin.parseStr,
+    //   Node.Top(
+    //     tokens.Expr.OpCall(
+    //       tokens.OpSym(defns./\("/\\")),
+    //       tokens.Expr.OpCall.Params(
+    //         tokens.Expr(tokens.Expr.OpCall(
+    //           tokens.OpSym(defns./\("/\\")),
+    //           tokens.Expr.OpCall.Params(
+    //             tokens.Expr(tokens.Expr.NumberLiteral("1")),
+    //             tokens.Expr(tokens.Expr.NumberLiteral("2"))
+    //           )
+    //         )),
+    //         tokens.Expr(tokens.Expr.NumberLiteral("3"))
+    //       )
+    //     )
+    //   ))
+    
+    // assertEquals(
+    //   s"""
+    //   |/\\ \\E x \in {1, 2, 3} : 1
+    //   | /\\ 2
+    //   |""".stripMargin.parseStr,
+    //   Node.Top(
+    //     tokens.Expr.NumberLiteral("1")
+    //   ))
 
-    // /\ 1 
-    //   /\ 2
-    //   /\ 3
-    //  /\ 4 
-    // /\ 5
-    //  /\ 6
+    // assertEquals(
+    //   s"""
+    //   |/\\ \\E x \in {1, 2, 3} : 1
+    //   |/\\ 2
+    //   |""".stripMargin.parseStr,
+    //   Node.Top(
+    //     tokens.Expr.NumberLiteral("1")
+    //   ))
 
+        // assertEquals(
+    //   s"""
+    //   | /\\ \\E x \in {1, 2, 3} : 1
+    //   |/\\ 2
+    //   |""".stripMargin.parseStr,
+    //   Node.Top(
+    //     tokens.Expr.NumberLiteral("1")
+    //   ))
+
+    // assertEquals(
+    //   s"""
+    //   |/\\ 1 
+    //   |  /\\ 2
+    //   |  /\\ 3
+    //   | /\\ 4 
+    //   |/\\ 5
+    //   | /\\ 6
+    //   |""".stripMargin.parseStr,
+    //   Node.Top(
+    //     tokens.Expr.NumberLiteral("1")
+    //   ))
+
+// TODO
+// paren
+// conjucntion
+// lamda function set

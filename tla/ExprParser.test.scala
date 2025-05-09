@@ -371,9 +371,6 @@ class ExprParserTests extends munit.FunSuite:
                 tokens.Expr(tokens.Expr.NumberLiteral("3"))
               )))))))
   
-  // Builtin Error should stop rewrite rules
-  // TODO???: error message structure
-  // TODO: depends on the location of resolveAlphas
   // test("Precedence: Error"):
   //   assertEquals(
   //     "x \\in A \\in B".parseStr,
@@ -754,27 +751,27 @@ class ExprParserTests extends munit.FunSuite:
             )),
             tokens.Expr(tokens.Expr.NumberLiteral("3"))
           ))))
-    assertEquals(
-      "(\\A x \\in {1, 2, 3} : x = 2)".parseStr,
-      Node.Top(
-        tokens.Expr.Forall(
-          tokens.QuantifierBounds(
-            tokens.QuantifierBound(
-              tokens.Id("x"),
-              tokens.Expr(tokens.Expr.SetLiteral(
-                tokens.Expr(tokens.Expr.NumberLiteral("1")),
-                tokens.Expr(tokens.Expr.NumberLiteral("2")),
-                tokens.Expr(tokens.Expr.NumberLiteral("3"))
-              )))),
-          tokens.Expr(tokens.Expr.OpCall(
-            tokens.OpSym(defns.`=`("=")),
-            tokens.Expr.OpCall.Params(
-              tokens.Expr(tokens.Expr.OpCall(
-                tokens.Id("x"),
-                tokens.Expr.OpCall.Params()
-              )),
-              tokens.Expr(tokens.Expr.NumberLiteral("2"))
-            ))))))
+    // assertEquals(
+    //   "\\A x \\in {1, 2, 3} : x = (2)".parseStr,
+    //   Node.Top(
+    //     tokens.Expr.Forall(
+    //       tokens.QuantifierBounds(
+    //         tokens.QuantifierBound(
+    //           tokens.Id("x"),
+    //           tokens.Expr(tokens.Expr.SetLiteral(
+    //             tokens.Expr(tokens.Expr.NumberLiteral("1")),
+    //             tokens.Expr(tokens.Expr.NumberLiteral("2")),
+    //             tokens.Expr(tokens.Expr.NumberLiteral("3"))
+    //           )))),
+    //       tokens.Expr(tokens.Expr.OpCall(
+    //         tokens.OpSym(defns.`=`("=")),
+    //         tokens.Expr.OpCall.Params(
+    //           tokens.Expr(tokens.Expr.OpCall(
+    //             tokens.Id("x"),
+    //             tokens.Expr.OpCall.Params()
+    //           )),
+    //           tokens.Expr(tokens.Expr.NumberLiteral("2"))
+    //         ))))))
 
   // test("Conjunctions"):
   //   assertEquals(

@@ -209,16 +209,6 @@ object ExprParser extends PassSeq:
           ~ eof
         ).rewrite: expr =>
            splice(expr.mkNode)
-        | on(
-          parent(tokens.Expr) *>
-            tok(TLAReader.ParenthesesGroup) *>
-              children:
-                field(rawExpression)
-                ~ eof
-        ).rewrite: rawExpr =>
-          splice(
-            tokens.Expr(rawExpr.mkNode)
-          )
     *> pass(once = false, strategy = pass.bottomUp) // resolve quantifiers/opCall
       .rules:
         on(
@@ -236,8 +226,6 @@ object ExprParser extends PassSeq:
               tokens.Expr.OpCall.Params(
                 args.iterator.map(_.mkNode)
               ))))
-        // TODO: Exists, Forall, Choose
-        // TODO: refactor and simplify
         | on(
           parent(tokens.Expr) *>
             skip(tok(TLAReader.LaTexLike).src("\\E"))
@@ -589,6 +577,16 @@ object ExprParser extends PassSeq:
               t.unparent(),
               f.unparent()
             ))
+        | on(
+          parent(tokens.Expr) *>
+            tok(TLAReader.ParenthesesGroup) *>
+              children:
+                field(rawExpression)
+                ~ eof
+        ).rewrite: rawExpr =>
+          splice(
+            tokens.Expr(rawExpr.mkNode)
+          )
     *> pass(once = false, strategy = pass.bottomUp) // resolve Alphas
       .rules:
         on(

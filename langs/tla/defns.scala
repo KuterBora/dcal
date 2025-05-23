@@ -219,4 +219,4 @@ object defns:
   case object `^+` extends PostfixOperator(15)
   case object `^*` extends PostfixOperator(15)
   case object `^#` extends PostfixOperator(15)
-  case object `'` extends PostfixOperator(15) 
+  case object `'` extends PostfixOperator(15)

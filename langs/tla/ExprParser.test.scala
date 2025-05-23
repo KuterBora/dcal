@@ -1,3 +1,17 @@
+// Copyright 2024-2025 Forja Team
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package forja.langs.tla
 
 import forja.*
@@ -14,39 +28,39 @@ class ExprParserTests extends munit.FunSuite:
       val wrapped_str =
         Source.fromString(
           s"""---- MODULE TestMod ----
-            |EXTENDS Naturals
-            |VARIABLE temp
-            |
-            |Init == $str
-            |====
-          """.stripMargin
+             |EXTENDS Naturals
+             |VARIABLE temp
+             |
+             |Init == $str
+             |====
+          """.stripMargin,
         )
       val top = TLAReader(SourceRange.entire(wrapped_str))
       TLAParser(top)
       ExprParser(top)
       Node.Top(
         top(lang.Module)(lang.Module.Defns)(lang.Operator)(
-          lang.Expr
-        ).unparentedChildren
+          lang.Expr,
+        ).unparentedChildren,
       )
   extension (str: String)
     def withoutParse: Node.Top =
       val wrapped_str =
         Source.fromString(
           s"""---- MODULE TestMod ----
-            |EXTENDS Naturals
-            |VARIABLE temp
-            |
-            |Init == $str
-            |====
-          """.stripMargin
+             |EXTENDS Naturals
+             |VARIABLE temp
+             |
+             |Init == $str
+             |====
+          """.stripMargin,
         )
       val top = TLAReader(SourceRange.entire(wrapped_str))
       TLAParser(top)
       Node.Top(
         top(lang.Module)(lang.Module.Defns)(lang.Operator)(
-          lang.Expr
-        ).unparentedChildren
+          lang.Expr,
+        ).unparentedChildren,
       )
 
   extension (top: Node.Top)
@@ -60,13 +74,17 @@ class ExprParserTests extends munit.FunSuite:
               lang.Id("test"),
               lang.Operator.Params(),
               lang.Expr(
-                top.unparentedChildren
-              )))))
+                top.unparentedChildren,
+              ),
+            ),
+          ),
+        ),
+      )
       ExprParser(freshTop)
       Node.Top(
         freshTop(lang.Module)(lang.Module.Defns)(lang.Operator)(
-          lang.Expr
-        ).unparentedChildren
+          lang.Expr,
+        ).unparentedChildren,
       )
 
   test("NumberLiteral"):
@@ -75,11 +93,11 @@ class ExprParserTests extends munit.FunSuite:
   test("StringLiteral"):
     assertEquals(
       "\"string\"".parseStr,
-      Node.Top(lang.Expr.StringLiteral("string"))
+      Node.Top(lang.Expr.StringLiteral("string")),
     )
     assertEquals(
       "\"string\\nnewline\"".parseStr,
-      Node.Top(lang.Expr.StringLiteral("string\nnewline"))
+      Node.Top(lang.Expr.StringLiteral("string\nnewline")),
     )
 
   test("Set Literal"):
@@ -89,13 +107,15 @@ class ExprParserTests extends munit.FunSuite:
         lang.Expr.SetLiteral(
           lang.Expr(lang.Expr.NumberLiteral("1")),
           lang.Expr(lang.Expr.NumberLiteral("2")),
-          lang.Expr(lang.Expr.NumberLiteral("3"))
-        )))
+          lang.Expr(lang.Expr.NumberLiteral("3")),
+        ),
+      ),
+    )
     assertEquals(
       "{}".parseStr,
-      Node.Top(lang.Expr.SetLiteral())
+      Node.Top(lang.Expr.SetLiteral()),
     )
-  
+
   test("TupleLiteral"):
     assertEquals(
       "<<1, 2, 3>>".parseStr,
@@ -103,13 +123,16 @@ class ExprParserTests extends munit.FunSuite:
         lang.Expr.TupleLiteral(
           lang.Expr(lang.Expr.NumberLiteral("1")),
           lang.Expr(lang.Expr.NumberLiteral("2")),
-          lang.Expr(lang.Expr.NumberLiteral("3"))
-        )))
+          lang.Expr(lang.Expr.NumberLiteral("3")),
+        ),
+      ),
+    )
     assertEquals(
       "<<>>".parseStr,
       Node.Top(
-        lang.Expr.TupleLiteral()
-      ))
+        lang.Expr.TupleLiteral(),
+      ),
+    )
 
   test("RecordLiteral"):
     assertEquals(
@@ -118,13 +141,16 @@ class ExprParserTests extends munit.FunSuite:
         lang.Expr.RecordLiteral(
           lang.Expr.RecordLiteral.Field(
             lang.Id("x"),
-            lang.Expr(lang.Expr.NumberLiteral("2"))
+            lang.Expr(lang.Expr.NumberLiteral("2")),
           ),
           lang.Expr.RecordLiteral.Field(
             lang.Id("y"),
-            lang.Expr(lang.Expr.NumberLiteral("3"))
-          ))))
-  
+            lang.Expr(lang.Expr.NumberLiteral("3")),
+          ),
+        ),
+      ),
+    )
+
   test("Projection (Record Field Acess)"):
     assertEquals(
       "x.y".parseStr,
@@ -133,21 +159,32 @@ class ExprParserTests extends munit.FunSuite:
           lang.Expr(
             lang.Expr.OpCall(
               lang.Id("x"),
-              lang.Expr.OpCall.Params()
-            )),
-          lang.Id("y"))))
+              lang.Expr.OpCall.Params(),
+            ),
+          ),
+          lang.Id("y"),
+        ),
+      ),
+    )
     assertEquals(
       "x.y.z".parseStr,
       Node.Top(
         lang.Expr.Project(
-          lang.Expr(lang.Expr.Project(
-            lang.Expr(
-              lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              )),
-            lang.Id("y"))),
-          lang.Id("z"))))
+          lang.Expr(
+            lang.Expr.Project(
+              lang.Expr(
+                lang.Expr.OpCall(
+                  lang.Id("x"),
+                  lang.Expr.OpCall.Params(),
+                ),
+              ),
+              lang.Id("y"),
+            ),
+          ),
+          lang.Id("z"),
+        ),
+      ),
+    )
     assertEquals(
       "[y |-> 2].y".parseStr,
       Node.Top(
@@ -156,10 +193,14 @@ class ExprParserTests extends munit.FunSuite:
             lang.Expr.RecordLiteral(
               lang.Expr.RecordLiteral.Field(
                 lang.Id("y"),
-                lang.Expr(lang.Expr.NumberLiteral("2"))
-          )
-            )),
-          lang.Id("y"))))
+                lang.Expr(lang.Expr.NumberLiteral("2")),
+              ),
+            ),
+          ),
+          lang.Id("y"),
+        ),
+      ),
+    )
 
   test("RecordSetLiteral"):
     assertEquals(
@@ -171,8 +212,13 @@ class ExprParserTests extends munit.FunSuite:
             lang.Expr(
               lang.Expr.SetLiteral(
                 lang.Expr(lang.Expr.NumberLiteral("1")),
-                lang.Expr(lang.Expr.NumberLiteral("2"))
-              ))))))
+                lang.Expr(lang.Expr.NumberLiteral("2")),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
 
   test("Name"):
     assertEquals(
@@ -180,8 +226,10 @@ class ExprParserTests extends munit.FunSuite:
       Node.Top(
         lang.Expr.OpCall(
           lang.Id("x"),
-          lang.Expr.OpCall.Params()
-        )))
+          lang.Expr.OpCall.Params(),
+        ),
+      ),
+    )
 
   test("Single Binary Operator"):
     assertEquals(
@@ -189,12 +237,15 @@ class ExprParserTests extends munit.FunSuite:
       Node.Top(
         lang.Expr.OpCall(
           lang.OpSym(
-            defns.+("+")
+            defns.+("+"),
           ),
           lang.Expr.OpCall.Params(
             lang.Expr(lang.Expr.NumberLiteral("5")),
-            lang.Expr(lang.Expr.NumberLiteral("6"))
-          ))))
+            lang.Expr(lang.Expr.NumberLiteral("6")),
+          ),
+        ),
+      ),
+    )
     assertEquals(
       "5 $ x".parseStr,
       Node.Top(
@@ -205,30 +256,47 @@ class ExprParserTests extends munit.FunSuite:
             lang.Expr(
               lang.Expr.OpCall(
                 lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              ))))))
-    
+                lang.Expr.OpCall.Params(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+
   test("Single Unary Operator"):
     assertEquals(
       "UNION A".parseStr,
-      Node.Top(lang.Expr.OpCall(
-        lang.OpSym(defns.UNION("UNION")),
-        lang.Expr.OpCall.Params(
-          lang.Expr(
-            lang.Expr.OpCall(
-              lang.Id("A"),
-              lang.Expr.OpCall.Params()
-            ))))))
+      Node.Top(
+        lang.Expr.OpCall(
+          lang.OpSym(defns.UNION("UNION")),
+          lang.Expr.OpCall.Params(
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.Id("A"),
+                lang.Expr.OpCall.Params(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
     assertEquals(
       "x'".parseStr,
-      Node.Top(lang.Expr.OpCall(
-        lang.OpSym(defns.`'`("'")),
-        lang.Expr.OpCall.Params(
-          lang.Expr(
-            lang.Expr.OpCall(
-              lang.Id("x"),
-              lang.Expr.OpCall.Params()
-            ))))))
+      Node.Top(
+        lang.Expr.OpCall(
+          lang.OpSym(defns.`'`("'")),
+          lang.Expr.OpCall.Params(
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.Id("x"),
+                lang.Expr.OpCall.Params(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
 
   test("Precedence: Infix - Infix"):
     assertEquals(
@@ -236,19 +304,25 @@ class ExprParserTests extends munit.FunSuite:
       Node.Top(
         lang.Expr.OpCall(
           lang.OpSym(
-            defns.+("+")
+            defns.+("+"),
           ),
           lang.Expr.OpCall.Params(
             lang.Expr(
               lang.Expr.OpCall(
                 lang.OpSym(
-                  defns.*("*")
+                  defns.*("*"),
                 ),
                 lang.Expr.OpCall.Params(
                   lang.Expr(lang.Expr.NumberLiteral("5")),
-                  lang.Expr(lang.Expr.NumberLiteral("6"))
-                ))),
-                lang.Expr(lang.Expr.NumberLiteral("7"))))))
+                  lang.Expr(lang.Expr.NumberLiteral("6")),
+                ),
+              ),
+            ),
+            lang.Expr(lang.Expr.NumberLiteral("7")),
+          ),
+        ),
+      ),
+    )
     assertEquals(
       "1 + 8 * 6 - 9 * 3".parseStr,
       Node.Top(
@@ -256,76 +330,130 @@ class ExprParserTests extends munit.FunSuite:
           lang.OpSym(defns.+("+")),
           lang.Expr.OpCall.Params(
             lang.Expr(lang.Expr.NumberLiteral("1")),
-            lang.Expr(lang.Expr.OpCall(
-              lang.OpSym(defns.-("-")),
-              lang.Expr.OpCall.Params(
-                lang.Expr(lang.Expr.OpCall(
-                  lang.OpSym(defns.*("*")),
-                  lang.Expr.OpCall.Params(
-                    lang.Expr(lang.Expr.NumberLiteral("8")),
-                    lang.Expr(lang.Expr.NumberLiteral("6"))
-                  ))),
-                lang.Expr(lang.Expr.OpCall(
-                  lang.OpSym(defns.*("*")),
-                  lang.Expr.OpCall.Params(
-                    lang.Expr(lang.Expr.NumberLiteral("9")),
-                    lang.Expr(lang.Expr.NumberLiteral("3"))
-                  ))))))))))
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.OpSym(defns.-("-")),
+                lang.Expr.OpCall.Params(
+                  lang.Expr(
+                    lang.Expr.OpCall(
+                      lang.OpSym(defns.*("*")),
+                      lang.Expr.OpCall.Params(
+                        lang.Expr(lang.Expr.NumberLiteral("8")),
+                        lang.Expr(lang.Expr.NumberLiteral("6")),
+                      ),
+                    ),
+                  ),
+                  lang.Expr(
+                    lang.Expr.OpCall(
+                      lang.OpSym(defns.*("*")),
+                      lang.Expr.OpCall.Params(
+                        lang.Expr(lang.Expr.NumberLiteral("9")),
+                        lang.Expr(lang.Expr.NumberLiteral("3")),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
 
   test("Precedence: Infix - Prefix"):
     assertEquals(
       "~x /\\ y".parseStr,
-      Node.Top(lang.Expr.OpCall(
-        lang.OpSym(defns./\("/\\")),
-        lang.Expr.OpCall.Params(
-          lang.Expr(lang.Expr.OpCall(
-            lang.OpSym(defns.~("~")),
-            lang.Expr.OpCall.Params(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              ))))),
-          lang.Expr(lang.Expr.OpCall(
-            lang.Id("y"),
-            lang.Expr.OpCall.Params()
-          ))))))
+      Node.Top(
+        lang.Expr.OpCall(
+          lang.OpSym(defns./\("/\\")),
+          lang.Expr.OpCall.Params(
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.OpSym(defns.~("~")),
+                lang.Expr.OpCall.Params(
+                  lang.Expr(
+                    lang.Expr.OpCall(
+                      lang.Id("x"),
+                      lang.Expr.OpCall.Params(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.Id("y"),
+                lang.Expr.OpCall.Params(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
     assertEquals(
       "~x \\in y".parseStr,
-      Node.Top(lang.Expr.OpCall(
-        lang.OpSym(defns.~("~")),
-        lang.Expr.OpCall.Params(
-          lang.Expr(lang.Expr.OpCall(
-            lang.OpSym(defns.`\\in`("\\in")),
-            lang.Expr.OpCall.Params(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("y"),
-                lang.Expr.OpCall.Params()
-              )))))))))
-  
+      Node.Top(
+        lang.Expr.OpCall(
+          lang.OpSym(defns.~("~")),
+          lang.Expr.OpCall.Params(
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.OpSym(defns.`\\in`("\\in")),
+                lang.Expr.OpCall.Params(
+                  lang.Expr(
+                    lang.Expr.OpCall(
+                      lang.Id("x"),
+                      lang.Expr.OpCall.Params(),
+                    ),
+                  ),
+                  lang.Expr(
+                    lang.Expr.OpCall(
+                      lang.Id("y"),
+                      lang.Expr.OpCall.Params(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+
   test("Precedence: Infix - Postfix"):
     assertEquals(
       "1 + x' * 2".parseStr,
-      Node.Top(lang.Expr.OpCall(
-        lang.OpSym(defns.+("+")),
-        lang.Expr.OpCall.Params(
-          lang.Expr(lang.Expr.NumberLiteral("1")),
-          lang.Expr(lang.Expr.OpCall(
-            lang.OpSym(defns.*("*")),
-            lang.Expr.OpCall.Params(
-              lang.Expr(lang.Expr.OpCall(
-                lang.OpSym(defns.`'`("'")),
+      Node.Top(
+        lang.Expr.OpCall(
+          lang.OpSym(defns.+("+")),
+          lang.Expr.OpCall.Params(
+            lang.Expr(lang.Expr.NumberLiteral("1")),
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.OpSym(defns.*("*")),
                 lang.Expr.OpCall.Params(
-                  lang.Expr(lang.Expr.OpCall(
-                    lang.Id("x"),
-                    lang.Expr.OpCall.Params()
-                  ))))),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            )))))))
-  
+                  lang.Expr(
+                    lang.Expr.OpCall(
+                      lang.OpSym(defns.`'`("'")),
+                      lang.Expr.OpCall.Params(
+                        lang.Expr(
+                          lang.Expr.OpCall(
+                            lang.Id("x"),
+                            lang.Expr.OpCall.Params(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  lang.Expr(lang.Expr.NumberLiteral("2")),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+
   test("Precedence: Unary - Unary"):
     assertEquals(
       "[] ~x".parseStr,
@@ -333,16 +461,26 @@ class ExprParserTests extends munit.FunSuite:
         lang.Expr.OpCall(
           lang.OpSym(defns.`[]`("[]")),
           lang.Expr.OpCall.Params(
-            lang.Expr(lang.Expr.OpCall(
-              lang.OpSym(defns.~("~")),
-              lang.Expr.OpCall.Params(
-                lang.Expr(lang.Expr.OpCall(
-                  lang.Id("x"),
-                  lang.Expr.OpCall.Params()
-                )))))))))  
-  
-      // TODO???: postfix postfix: never allowed
-  
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.OpSym(defns.~("~")),
+                lang.Expr.OpCall.Params(
+                  lang.Expr(
+                    lang.Expr.OpCall(
+                      lang.Id("x"),
+                      lang.Expr.OpCall.Params(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+
+    // TODO???: postfix postfix: never allowed
+
   test("Precedence: Associative"):
     assertEquals(
       "1 + 2 + 3".parseStr,
@@ -351,37 +489,47 @@ class ExprParserTests extends munit.FunSuite:
           lang.OpSym(defns.+("+")),
           lang.Expr.OpCall.Params(
             lang.Expr(lang.Expr.NumberLiteral("1")),
-            lang.Expr(lang.Expr.OpCall(
-              lang.OpSym(defns.+("+")),
-              lang.Expr.OpCall.Params(
-                lang.Expr(lang.Expr.NumberLiteral("2")),
-                lang.Expr(lang.Expr.NumberLiteral("3"))
-              )))))))
-    assertEquals(
-      "1 * 2 / 3".parseStr,
-      Node.Top(lang.Expr(
-        Builtin.Error(
-          s"forja.langs.tla.defns.* and forja.langs.tla.defns./ must have different precedence, or be duplicates of an associative operator.",
-          TmpInfixGroup(
-            defns.*("*"),
-            lang.Expr(lang.Expr.NumberLiteral("1")),
-            TmpInfixGroup(
-              defns./("/"),
-              lang.Expr(lang.Expr.NumberLiteral("2")),
-              lang.Expr(lang.Expr.NumberLiteral("3")),
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.OpSym(defns.+("+")),
+                lang.Expr.OpCall.Params(
+                  lang.Expr(lang.Expr.NumberLiteral("2")),
+                  lang.Expr(lang.Expr.NumberLiteral("3")),
+                ),
+              ),
             ),
           ),
         ),
-      )),
+      ),
     )
-  
+    assertEquals(
+      "1 * 2 / 3".parseStr,
+      Node.Top(
+        lang.Expr(
+          Builtin.Error(
+            s"forja.langs.tla.defns.* and forja.langs.tla.defns./ must have different precedence, or be duplicates of an associative operator.",
+            TmpInfixGroup(
+              defns.*("*"),
+              lang.Expr(lang.Expr.NumberLiteral("1")),
+              TmpInfixGroup(
+                defns./("/"),
+                lang.Expr(lang.Expr.NumberLiteral("2")),
+                lang.Expr(lang.Expr.NumberLiteral("3")),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+
   // test("Precedence: Error"):
   //   assertEquals(
   //     "x \\in A \\in B".parseStr,
   //     Node.Top(lang.Expr(
   //       Node(Builtin.Error)(
   //         Builtin.Error.Message(
-  //           s"26:distcompiler.tla.defns.\\in and 26:distcompiler.tla.defns.\\in must have different precedence, or be duplicates of an associative operator."
+  /* s"26:distcompiler.tla.defns.\\in and 26:distcompiler.tla.defns.\\in must
+   * have different precedence, or be duplicates of an associative operator." */
   //         ),
   //         Builtin.Error.AST(
   //           lang.Expr.TmpInfixGroup(
@@ -397,7 +545,8 @@ class ExprParserTests extends munit.FunSuite:
   //     Node.Top(lang.Expr(
   //       Node(Builtin.Error)(
   //         Builtin.Error.Message(
-  //           s"26:distcompiler.tla.defns.\\in and distcompiler.tla.defns.= must have different precedence, or be duplicates of an associative operator."
+  /* s"26:distcompiler.tla.defns.\\in and distcompiler.tla.defns.= must have
+   * different precedence, or be duplicates of an associative operator." */
   //         ),
   //         Builtin.Error.AST(
   //           lang.Expr.TmpInfixGroup(
@@ -418,8 +567,11 @@ class ExprParserTests extends munit.FunSuite:
           lang.Expr.OpCall.Params(
             lang.Expr(lang.Expr.NumberLiteral("1")),
             lang.Expr(lang.Expr.NumberLiteral("2")),
-            lang.Expr(lang.Expr.NumberLiteral("3"))
-          ))))
+            lang.Expr(lang.Expr.NumberLiteral("3")),
+          ),
+        ),
+      ),
+    )
 
   // TODO: conjunction alignment
 
@@ -428,121 +580,158 @@ class ExprParserTests extends munit.FunSuite:
       "x[\"y\"]".parseStr,
       Node.Top(
         lang.Expr.FnCall(
-          lang.Expr(lang.Expr.OpCall(
-            lang.Id("x"),
-            lang.Expr.OpCall.Params()
-          )),
-          lang.Expr(lang.Expr.StringLiteral("y"))
-        )))
+          lang.Expr(
+            lang.Expr.OpCall(
+              lang.Id("x"),
+              lang.Expr.OpCall.Params(),
+            ),
+          ),
+          lang.Expr(lang.Expr.StringLiteral("y")),
+        ),
+      ),
+    )
     assertEquals(
       "x[1, 2, 3]".parseStr,
       Node.Top(
         lang.Expr.FnCall(
-          lang.Expr(lang.Expr.OpCall(
-            lang.Id("x"),
-            lang.Expr.OpCall.Params()
-          )),
-          lang.Expr(lang.Expr.TupleLiteral(
-            lang.Expr(lang.Expr.NumberLiteral("1")),
-            lang.Expr(lang.Expr.NumberLiteral("2")),
-            lang.Expr(lang.Expr.NumberLiteral("3")),
-          ))
-        )))
-  
+          lang.Expr(
+            lang.Expr.OpCall(
+              lang.Id("x"),
+              lang.Expr.OpCall.Params(),
+            ),
+          ),
+          lang.Expr(
+            lang.Expr.TupleLiteral(
+              lang.Expr(lang.Expr.NumberLiteral("1")),
+              lang.Expr(lang.Expr.NumberLiteral("2")),
+              lang.Expr(lang.Expr.NumberLiteral("3")),
+            ),
+          ),
+        ),
+      ),
+    )
+
   test("If"):
     assertEquals(
       """IF A 
-       |THEN 1
-       |ELSE 2""".stripMargin.parseStr,
+        |THEN 1
+        |ELSE 2""".stripMargin.parseStr,
       Node.Top(
         lang.Expr.If(
           lang.Expr(
             lang.Expr.OpCall(
               lang.Id("A"),
-              lang.Expr.OpCall.Params()
-            )),
+              lang.Expr.OpCall.Params(),
+            ),
+          ),
           lang.Expr(lang.Expr.NumberLiteral("1")),
-          lang.Expr(lang.Expr.NumberLiteral("2"))
-        )))
-  
+          lang.Expr(lang.Expr.NumberLiteral("2")),
+        ),
+      ),
+    )
+
   test("Case"):
     assertEquals(
       """CASE A -> 1 
-       | [] B -> 2""".stripMargin.parseStr,
+        | [] B -> 2""".stripMargin.parseStr,
       Node.Top(
         lang.Expr.Case(
           lang.Expr.Case.Branches(
             lang.Expr.Case.Branch(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("A"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("1"))
+              lang.Expr(
+                lang.Expr.OpCall(
+                  lang.Id("A"),
+                  lang.Expr.OpCall.Params(),
+                ),
+              ),
+              lang.Expr(lang.Expr.NumberLiteral("1")),
             ),
             lang.Expr.Case.Branch(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("B"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            )),
-          lang.Expr.Case.Other(lang.Expr.Case.Other.None())
-        )))
+              lang.Expr(
+                lang.Expr.OpCall(
+                  lang.Id("B"),
+                  lang.Expr.OpCall.Params(),
+                ),
+              ),
+              lang.Expr(lang.Expr.NumberLiteral("2")),
+            ),
+          ),
+          lang.Expr.Case.Other(lang.Expr.Case.Other.None()),
+        ),
+      ),
+    )
     assertEquals(
       """CASE A -> 1 
-       | [] B -> 2
-       | OTHER -> 3""".stripMargin.parseStr,
+        | [] B -> 2
+        | OTHER -> 3""".stripMargin.parseStr,
       Node.Top(
         lang.Expr.Case(
           lang.Expr.Case.Branches(
             lang.Expr.Case.Branch(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("A"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("1"))
+              lang.Expr(
+                lang.Expr.OpCall(
+                  lang.Id("A"),
+                  lang.Expr.OpCall.Params(),
+                ),
+              ),
+              lang.Expr(lang.Expr.NumberLiteral("1")),
             ),
             lang.Expr.Case.Branch(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("B"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            )),
+              lang.Expr(
+                lang.Expr.OpCall(
+                  lang.Id("B"),
+                  lang.Expr.OpCall.Params(),
+                ),
+              ),
+              lang.Expr(lang.Expr.NumberLiteral("2")),
+            ),
+          ),
           lang.Expr.Case.Other(
-            lang.Expr(lang.Expr.NumberLiteral("3"))
-          ))))
-  
+            lang.Expr(lang.Expr.NumberLiteral("3")),
+          ),
+        ),
+      ),
+    )
+
   test("LET"):
     assertEquals(
       """LET x == 1
-      |y == 2
-      |IN  {y, x}""".stripMargin.parseStr,
+        |y == 2
+        |IN  {y, x}""".stripMargin.parseStr,
       Node.Top(
         lang.Expr.Let(
           lang.Expr.Let.Defns(
             lang.Operator(
               lang.Id("x"),
               lang.Operator.Params(),
-              lang.Expr(lang.Expr.NumberLiteral("1"))
+              lang.Expr(lang.Expr.NumberLiteral("1")),
             ),
             lang.Operator(
               lang.Id("y"),
               lang.Operator.Params(),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            )
+              lang.Expr(lang.Expr.NumberLiteral("2")),
+            ),
           ),
           lang.Expr(
             lang.Expr.SetLiteral(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("y"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              )))))))
-  
+              lang.Expr(
+                lang.Expr.OpCall(
+                  lang.Id("y"),
+                  lang.Expr.OpCall.Params(),
+                ),
+              ),
+              lang.Expr(
+                lang.Expr.OpCall(
+                  lang.Id("x"),
+                  lang.Expr.OpCall.Params(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+
   test("Exists"):
     assertEquals(
       "\\E x \\in {1, 2, 3} : x = 2".parseStr,
@@ -551,20 +740,32 @@ class ExprParserTests extends munit.FunSuite:
           lang.QuantifierBounds(
             lang.QuantifierBound(
               lang.Id("x"),
-              lang.Expr(lang.Expr.SetLiteral(
-                lang.Expr(lang.Expr.NumberLiteral("1")),
+              lang.Expr(
+                lang.Expr.SetLiteral(
+                  lang.Expr(lang.Expr.NumberLiteral("1")),
+                  lang.Expr(lang.Expr.NumberLiteral("2")),
+                  lang.Expr(lang.Expr.NumberLiteral("3")),
+                ),
+              ),
+            ),
+          ),
+          lang.Expr(
+            lang.Expr.OpCall(
+              lang.OpSym(defns.`=`("=")),
+              lang.Expr.OpCall.Params(
+                lang.Expr(
+                  lang.Expr.OpCall(
+                    lang.Id("x"),
+                    lang.Expr.OpCall.Params(),
+                  ),
+                ),
                 lang.Expr(lang.Expr.NumberLiteral("2")),
-                lang.Expr(lang.Expr.NumberLiteral("3"))
-              )))),
-          lang.Expr(lang.Expr.OpCall(
-            lang.OpSym(defns.`=`("=")),
-            lang.Expr.OpCall.Params(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            ))))))
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
     assertEquals(
       "\\E <<x, y, z>> \\in {1, 2, 3} : x = 2".parseStr,
       Node.Top(
@@ -574,22 +775,34 @@ class ExprParserTests extends munit.FunSuite:
               lang.Ids(
                 lang.Id("x"),
                 lang.Id("y"),
-                lang.Id("z")
+                lang.Id("z"),
               ),
-              lang.Expr(lang.Expr.SetLiteral(
-                lang.Expr(lang.Expr.NumberLiteral("1")),
+              lang.Expr(
+                lang.Expr.SetLiteral(
+                  lang.Expr(lang.Expr.NumberLiteral("1")),
+                  lang.Expr(lang.Expr.NumberLiteral("2")),
+                  lang.Expr(lang.Expr.NumberLiteral("3")),
+                ),
+              ),
+            ),
+          ),
+          lang.Expr(
+            lang.Expr.OpCall(
+              lang.OpSym(defns.`=`("=")),
+              lang.Expr.OpCall.Params(
+                lang.Expr(
+                  lang.Expr.OpCall(
+                    lang.Id("x"),
+                    lang.Expr.OpCall.Params(),
+                  ),
+                ),
                 lang.Expr(lang.Expr.NumberLiteral("2")),
-                lang.Expr(lang.Expr.NumberLiteral("3"))
-              )))),
-          lang.Expr(lang.Expr.OpCall(
-            lang.OpSym(defns.`=`("=")),
-            lang.Expr.OpCall.Params(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            ))))))
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
     assertEquals(
       "\\E x \\in {1, 2, 3}, y \\in {4, 5, 6} : x = 2".parseStr,
       Node.Top(
@@ -597,27 +810,42 @@ class ExprParserTests extends munit.FunSuite:
           lang.QuantifierBounds(
             lang.QuantifierBound(
               lang.Id("x"),
-              lang.Expr(lang.Expr.SetLiteral(
-                lang.Expr(lang.Expr.NumberLiteral("1")),
-                lang.Expr(lang.Expr.NumberLiteral("2")),
-                lang.Expr(lang.Expr.NumberLiteral("3"))
-              ))),
+              lang.Expr(
+                lang.Expr.SetLiteral(
+                  lang.Expr(lang.Expr.NumberLiteral("1")),
+                  lang.Expr(lang.Expr.NumberLiteral("2")),
+                  lang.Expr(lang.Expr.NumberLiteral("3")),
+                ),
+              ),
+            ),
             lang.QuantifierBound(
               lang.Id("y"),
-              lang.Expr(lang.Expr.SetLiteral(
-                lang.Expr(lang.Expr.NumberLiteral("4")),
-                lang.Expr(lang.Expr.NumberLiteral("5")),
-                lang.Expr(lang.Expr.NumberLiteral("6"))
-              )))),
-          lang.Expr(lang.Expr.OpCall(
-            lang.OpSym(defns.`=`("=")),
-            lang.Expr.OpCall.Params(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            ))))))
+              lang.Expr(
+                lang.Expr.SetLiteral(
+                  lang.Expr(lang.Expr.NumberLiteral("4")),
+                  lang.Expr(lang.Expr.NumberLiteral("5")),
+                  lang.Expr(lang.Expr.NumberLiteral("6")),
+                ),
+              ),
+            ),
+          ),
+          lang.Expr(
+            lang.Expr.OpCall(
+              lang.OpSym(defns.`=`("=")),
+              lang.Expr.OpCall.Params(
+                lang.Expr(
+                  lang.Expr.OpCall(
+                    lang.Id("x"),
+                    lang.Expr.OpCall.Params(),
+                  ),
+                ),
+                lang.Expr(lang.Expr.NumberLiteral("2")),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
 
   test("Forall"):
     assertEquals(
@@ -627,23 +855,35 @@ class ExprParserTests extends munit.FunSuite:
           lang.QuantifierBounds(
             lang.QuantifierBound(
               lang.Id("x"),
-              lang.Expr(lang.Expr.SetLiteral(
-                lang.Expr(lang.Expr.NumberLiteral("1")),
+              lang.Expr(
+                lang.Expr.SetLiteral(
+                  lang.Expr(lang.Expr.NumberLiteral("1")),
+                  lang.Expr(lang.Expr.NumberLiteral("2")),
+                  lang.Expr(lang.Expr.NumberLiteral("3")),
+                ),
+              ),
+            ),
+          ),
+          lang.Expr(
+            lang.Expr.OpCall(
+              lang.OpSym(defns.`=`("=")),
+              lang.Expr.OpCall.Params(
+                lang.Expr(
+                  lang.Expr.OpCall(
+                    lang.Id("x"),
+                    lang.Expr.OpCall.Params(),
+                  ),
+                ),
                 lang.Expr(lang.Expr.NumberLiteral("2")),
-                lang.Expr(lang.Expr.NumberLiteral("3"))
-              )))),
-          lang.Expr(lang.Expr.OpCall(
-            lang.OpSym(defns.`=`("=")),
-            lang.Expr.OpCall.Params(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            ))))))
-  
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+
   // TODO: AA EE ??
-  
+
   test("Temporal Logic Combined"):
     assertEquals(
       "s /\\ \\E x \\in y : z /\\ \\E p \\in q : r".parseStr,
@@ -651,43 +891,71 @@ class ExprParserTests extends munit.FunSuite:
         lang.Expr.OpCall(
           lang.OpSym(defns./\("/\\")),
           lang.Expr.OpCall.Params(
-            lang.Expr(lang.Expr.OpCall(
-              lang.Id("s"),
-              lang.Expr.OpCall.Params()
-            )),
-            lang.Expr(lang.Expr.Exists(
-              lang.QuantifierBounds(
-                lang.QuantifierBound(
-                  lang.Id("x"),
-                  lang.Expr(lang.Expr.OpCall(
-                    lang.Id("y"),
-                    lang.Expr.OpCall.Params()
-                  )))),
-              lang.Expr(lang.Expr.OpCall(
-                lang.OpSym(defns./\("/\\")),
-                lang.Expr.OpCall.Params(
-                  lang.Expr(lang.Expr.OpCall(
-                    lang.Id("z"),
-                    lang.Expr.OpCall.Params()
-                  )),
-                  lang.Expr(lang.Expr.Exists(
-                    lang.QuantifierBounds(
-                      lang.QuantifierBound(
-                        lang.Id("p"),
-                        lang.Expr(lang.Expr.OpCall(
-                          lang.Id("q"),
-                          lang.Expr.OpCall.Params()
-                        )))),
-                    lang.Expr(lang.Expr.OpCall(
-                      lang.Id("r"),
-                      lang.Expr.OpCall.Params()
-                    )))))))))))))
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.Id("s"),
+                lang.Expr.OpCall.Params(),
+              ),
+            ),
+            lang.Expr(
+              lang.Expr.Exists(
+                lang.QuantifierBounds(
+                  lang.QuantifierBound(
+                    lang.Id("x"),
+                    lang.Expr(
+                      lang.Expr.OpCall(
+                        lang.Id("y"),
+                        lang.Expr.OpCall.Params(),
+                      ),
+                    ),
+                  ),
+                ),
+                lang.Expr(
+                  lang.Expr.OpCall(
+                    lang.OpSym(defns./\("/\\")),
+                    lang.Expr.OpCall.Params(
+                      lang.Expr(
+                        lang.Expr.OpCall(
+                          lang.Id("z"),
+                          lang.Expr.OpCall.Params(),
+                        ),
+                      ),
+                      lang.Expr(
+                        lang.Expr.Exists(
+                          lang.QuantifierBounds(
+                            lang.QuantifierBound(
+                              lang.Id("p"),
+                              lang.Expr(
+                                lang.Expr.OpCall(
+                                  lang.Id("q"),
+                                  lang.Expr.OpCall.Params(),
+                                ),
+                              ),
+                            ),
+                          ),
+                          lang.Expr(
+                            lang.Expr.OpCall(
+                              lang.Id("r"),
+                              lang.Expr.OpCall.Params(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
 
   // todo: function
   // todo: set comprehension
   // todo: set refinement
   // todo: lambda
-  
+
   test("Choose"):
     assertEquals(
       "CHOOSE x \\in {1, 2, 3} : x = 2".parseStr,
@@ -695,66 +963,87 @@ class ExprParserTests extends munit.FunSuite:
         lang.Expr.Choose(
           lang.QuantifierBound(
             lang.Id("x"),
-            lang.Expr(lang.Expr.SetLiteral(
-              lang.Expr(lang.Expr.NumberLiteral("1")),
-              lang.Expr(lang.Expr.NumberLiteral("2")),
-              lang.Expr(lang.Expr.NumberLiteral("3"))
-            ))),
-          lang.Expr(lang.Expr.OpCall(
-            lang.OpSym(defns.`=`("=")),
-            lang.Expr.OpCall.Params(
-              lang.Expr(lang.Expr.OpCall(
-                lang.Id("x"),
-                lang.Expr.OpCall.Params()
-              )),
-              lang.Expr(lang.Expr.NumberLiteral("2"))
-            ))))))
+            lang.Expr(
+              lang.Expr.SetLiteral(
+                lang.Expr(lang.Expr.NumberLiteral("1")),
+                lang.Expr(lang.Expr.NumberLiteral("2")),
+                lang.Expr(lang.Expr.NumberLiteral("3")),
+              ),
+            ),
+          ),
+          lang.Expr(
+            lang.Expr.OpCall(
+              lang.OpSym(defns.`=`("=")),
+              lang.Expr.OpCall.Params(
+                lang.Expr(
+                  lang.Expr.OpCall(
+                    lang.Id("x"),
+                    lang.Expr.OpCall.Params(),
+                  ),
+                ),
+                lang.Expr(lang.Expr.NumberLiteral("2")),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
     // todo: id nil, tuple expr, tuple nil
 
   // todo: except
-  
+
   test("Parentheses"):
     assertEquals(
       "(1)".parseStr,
-      Node.Top(lang.Expr.NumberLiteral("1"))
+      Node.Top(lang.Expr.NumberLiteral("1")),
     )
     assertEquals(
       "(((x)))".parseStr,
       Node.Top(
         lang.Expr.OpCall(
           lang.Id("x"),
-          lang.Expr.OpCall.Params()
-        )))
+          lang.Expr.OpCall.Params(),
+        ),
+      ),
+    )
     assertEquals(
       "(5 + 6)".parseStr,
       Node.Top(
         lang.Expr.OpCall(
           lang.OpSym(
-            defns.+("+")
+            defns.+("+"),
           ),
           lang.Expr.OpCall.Params(
             lang.Expr(lang.Expr.NumberLiteral("5")),
-            lang.Expr(lang.Expr.NumberLiteral("6"))
-          ))))
+            lang.Expr(lang.Expr.NumberLiteral("6")),
+          ),
+        ),
+      ),
+    )
     assertEquals(
       "(1 + 2) * 3".parseStr,
       Node.Top(
         lang.Expr.OpCall(
           lang.OpSym(
-            defns.*("*")
+            defns.*("*"),
           ),
           lang.Expr.OpCall.Params(
-            lang.Expr(lang.Expr.OpCall(
-              lang.OpSym(
-                defns.+("+")
+            lang.Expr(
+              lang.Expr.OpCall(
+                lang.OpSym(
+                  defns.+("+"),
+                ),
+                lang.Expr.OpCall.Params(
+                  lang.Expr(lang.Expr.NumberLiteral("1")),
+                  lang.Expr(lang.Expr.NumberLiteral("2")),
+                ),
               ),
-              lang.Expr.OpCall.Params(
-                lang.Expr(lang.Expr.NumberLiteral("1")),
-                lang.Expr(lang.Expr.NumberLiteral("2"))
-              )
-            )),
-            lang.Expr(lang.Expr.NumberLiteral("3"))
-          ))))
+            ),
+            lang.Expr(lang.Expr.NumberLiteral("3")),
+          ),
+        ),
+      ),
+    )
     // assertEquals(
     //   "\\A x \\in {1, 2, 3} : x = (2)".parseStr,
     //   Node.Top(
@@ -836,67 +1125,67 @@ class ExprParserTests extends munit.FunSuite:
   //                   lang.Expr(lang.Expr.NumberLiteral("3"))
   //                 ))))))))))
 
-    // assertEquals(
-    //   s"""
-    //   |/\\ 1
-    //   | /\\ 2
-    //   |/\\ 3
-    //   |""".stripMargin.parseStr,
-    //   Node.Top(
-    //     lang.Expr.OpCall(
-    //       lang.OpSym(defns./\("/\\")),
-    //       lang.Expr.OpCall.Params(
-    //         lang.Expr(lang.Expr.OpCall(
-    //           lang.OpSym(defns./\("/\\")),
-    //           lang.Expr.OpCall.Params(
-    //             lang.Expr(lang.Expr.NumberLiteral("1")),
-    //             lang.Expr(lang.Expr.NumberLiteral("2"))
-    //           )
-    //         )),
-    //         lang.Expr(lang.Expr.NumberLiteral("3"))
-    //       )
-    //     )
-    //   ))
-    
-    // assertEquals(
-    //   s"""
-    //   |/\\ \\E x \in {1, 2, 3} : 1
-    //   | /\\ 2
-    //   |""".stripMargin.parseStr,
-    //   Node.Top(
-    //     lang.Expr.NumberLiteral("1")
-    //   ))
+  // assertEquals(
+  //   s"""
+  //   |/\\ 1
+  //   | /\\ 2
+  //   |/\\ 3
+  //   |""".stripMargin.parseStr,
+  //   Node.Top(
+  //     lang.Expr.OpCall(
+  //       lang.OpSym(defns./\("/\\")),
+  //       lang.Expr.OpCall.Params(
+  //         lang.Expr(lang.Expr.OpCall(
+  //           lang.OpSym(defns./\("/\\")),
+  //           lang.Expr.OpCall.Params(
+  //             lang.Expr(lang.Expr.NumberLiteral("1")),
+  //             lang.Expr(lang.Expr.NumberLiteral("2"))
+  //           )
+  //         )),
+  //         lang.Expr(lang.Expr.NumberLiteral("3"))
+  //       )
+  //     )
+  //   ))
 
-    // assertEquals(
-    //   s"""
-    //   |/\\ \\E x \in {1, 2, 3} : 1
-    //   |/\\ 2
-    //   |""".stripMargin.parseStr,
-    //   Node.Top(
-    //     lang.Expr.NumberLiteral("1")
-    //   ))
+  // assertEquals(
+  //   s"""
+  //   |/\\ \\E x \in {1, 2, 3} : 1
+  //   | /\\ 2
+  //   |""".stripMargin.parseStr,
+  //   Node.Top(
+  //     lang.Expr.NumberLiteral("1")
+  //   ))
 
-        // assertEquals(
-    //   s"""
-    //   | /\\ \\E x \in {1, 2, 3} : 1
-    //   |/\\ 2
-    //   |""".stripMargin.parseStr,
-    //   Node.Top(
-    //     lang.Expr.NumberLiteral("1")
-    //   ))
+  // assertEquals(
+  //   s"""
+  //   |/\\ \\E x \in {1, 2, 3} : 1
+  //   |/\\ 2
+  //   |""".stripMargin.parseStr,
+  //   Node.Top(
+  //     lang.Expr.NumberLiteral("1")
+  //   ))
 
-    // assertEquals(
-    //   s"""
-    //   |/\\ 1 
-    //   |  /\\ 2
-    //   |  /\\ 3
-    //   | /\\ 4 
-    //   |/\\ 5
-    //   | /\\ 6
-    //   |""".stripMargin.parseStr,
-    //   Node.Top(
-    //     lang.Expr.NumberLiteral("1")
-    //   ))
+  // assertEquals(
+  //   s"""
+  //   | /\\ \\E x \in {1, 2, 3} : 1
+  //   |/\\ 2
+  //   |""".stripMargin.parseStr,
+  //   Node.Top(
+  //     lang.Expr.NumberLiteral("1")
+  //   ))
+
+  // assertEquals(
+  //   s"""
+  //   |/\\ 1
+  //   |  /\\ 2
+  //   |  /\\ 3
+  //   | /\\ 4
+  //   |/\\ 5
+  //   | /\\ 6
+  //   |""".stripMargin.parseStr,
+  //   Node.Top(
+  //     lang.Expr.NumberLiteral("1")
+  //   ))
 
 // TODO
 // paren

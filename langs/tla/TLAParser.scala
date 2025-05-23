@@ -179,21 +179,22 @@ object TLAParser extends PassSeq:
     nodeSpanMatchedBy(impl).map(RawExpression.apply)
   end rawExpression
 
-  def rawConjunction(col : Integer): SeqPattern[RawExpression] =
+  def rawConjunction(col: Integer): SeqPattern[RawExpression] =
     val simpleCases: SeqPattern[Unit] =
       anyChild.void <* not(
         tok(expressionDelimiters*)
-          | tok(defns./\).filter(node => 
-              val s = node.sourceRange
-              s.source.lines.lineColAtOffset(s.offset)._2 > col)
-        // stop at operator definitions: all valid patterns leading to == here
-          | operatorDefnBeginnings
+          | tok(defns./\).filter(node =>
+            val s = node.sourceRange
+            s.source.lines.lineColAtOffset(s.offset)._2 > col,
+          )
+          // stop at operator definitions: all valid patterns leading to == here
+          | operatorDefnBeginnings,
       )
 
     lazy val quantifierBound: SeqPattern[EmptyTuple] =
       skip(
         tok(TupleGroup).as(EmptyTuple)
-          | repeatedSepBy1(`,`)(Alpha)
+          | repeatedSepBy1(`,`)(Alpha),
       )
         ~ skip(defns.`\\in`)
         ~ skip(defer(impl))
@@ -205,7 +206,7 @@ object TLAParser extends PassSeq:
     lazy val forallExists: SeqPattern[EmptyTuple] =
       skip(
         tok(LaTexLike).src("\\A") | tok(LaTexLike).src("\\AA") | tok(LaTexLike)
-          .src("\\E") | tok(LaTexLike).src("\\EE")
+          .src("\\E") | tok(LaTexLike).src("\\EE"),
       )
         ~ skip(quantifierBounds | repeatedSepBy1(`,`)(Alpha))
         ~ skip(`:`)
@@ -237,7 +238,7 @@ object TLAParser extends PassSeq:
           | choose
           | lambda
           | idFrag
-          | simpleCases // last, otherwise it eats parts of the above
+          | simpleCases, // last, otherwise it eats parts of the above
       ).void
 
     nodeSpanMatchedBy(impl).map(RawExpression.apply)

@@ -190,9 +190,10 @@ object lang extends WellformedDef:
               Expr,
             ),
           )
-      object Other extends t(
-        choice(Expr, Other.None)
-      ):
+      object Other
+          extends t(
+            choice(Expr, Other.None),
+          ):
         object None extends t(Atom)
     end Case
 
